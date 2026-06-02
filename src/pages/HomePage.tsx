@@ -164,6 +164,15 @@ export function HomePage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
+              onClick={() => {
+                void toggleFullscreen();
+              }}
+              className={topButtonClass}
+            >
+              {isFullscreen ? "Vollbild aus" : "Vollbild"}
+            </button>
+            <button
+              type="button"
               onClick={() => setShowSharePanel((current) => !current)}
               className={topButtonClass}
             >
@@ -338,10 +347,6 @@ export function HomePage() {
             onExport={handleExport}
             onImport={handleImport}
             onResetAll={handleResetAll}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={() => {
-              void toggleFullscreen();
-            }}
           />
         ) : null}
       </div>

@@ -19,8 +19,6 @@ type AdminPanelProps = {
   onExport: () => void;
   onImport: (file: File) => void;
   onResetAll: () => void;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
 };
 
 const emptyDraft: GameDraft = {
@@ -39,9 +37,7 @@ export function AdminPanel({
   onResetResult,
   onExport,
   onImport,
-  onResetAll,
-  isFullscreen,
-  onToggleFullscreen
+  onResetAll
 }: AdminPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState<GameDraft>(emptyDraft);
@@ -100,13 +96,6 @@ export function AdminPanel({
           <p className="text-white/60">Spiele pflegen, Punkte vergeben und Event steuern.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={onToggleFullscreen}
-            className="rounded-full border border-white/15 px-4 py-2 text-sm uppercase tracking-[0.2em] text-white transition hover:border-accent-cyan hover:text-accent-cyan"
-          >
-            {isFullscreen ? "Vollbild aus" : "Vollbild"}
-          </button>
           <button
             type="button"
             onClick={onExport}
