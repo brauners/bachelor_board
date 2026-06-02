@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Game, ScoreboardState, SyncStatus, Winner } from "../types/game";
+import { createId } from "../utils/id";
 import { calculateStats, calculateTotals, getLeader, getNextOpenGame } from "../utils/scoring";
 import { sampleGames } from "../utils/sampleGames";
 import { loadState, saveState } from "../utils/storage";
@@ -342,7 +343,7 @@ export function useScoreboard() {
     updateGames((games) => [
       ...games,
       {
-        id: crypto.randomUUID(),
+        id: createId(),
         guestName: input.guestName,
         gameName: input.gameName,
         points: input.points,

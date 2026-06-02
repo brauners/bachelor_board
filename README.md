@@ -10,7 +10,13 @@ docker compose up
 
 Danach ist die Anwendung unter `http://localhost:8787` erreichbar.
 
-Wenn neue npm-Abhaengigkeiten dazugekommen sind, starte stattdessen:
+Wenn sich Source-Code, Build-Logik oder npm-Abhaengigkeiten geaendert haben, starte stattdessen:
+
+```bash
+docker compose up --build
+```
+
+Wenn neue npm-Abhaengigkeiten dazugekommen sind und noch alte anonyme Volumes herumliegen, nutze:
 
 ```bash
 docker compose up --build --renew-anon-volumes
