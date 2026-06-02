@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { useRef, useState } from "react";
 import type { Game } from "../types/game";
 
 type GameDraft = {

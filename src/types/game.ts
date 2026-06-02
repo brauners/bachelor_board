@@ -26,3 +26,5 @@ export type ScoreStats = {
   winRateBachelor: number;
   winRateGuest: number;
 };
+
+export type SyncStatus = "connecting" | "live" | "offline";

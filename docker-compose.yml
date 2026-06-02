@@ -4,11 +4,32 @@ services:
       context: .
       target: dev
     ports:
-      - "127.0.0.1:5173:5173"
+      - "5173:5173"
     volumes:
       - .:/app
       - /app/node_modules
+    depends_on:
+      - realtime
     environment:
       VITE_HOST: "0.0.0.0"
+      VITE_REALTIME_PORT: "8787"
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+  realtime:
+    build:
+      context: .
+      target: server-dev
+    ports:
+      - "8787:8787"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - realtime_data:/data
+    environment:
+      PORT: "8787"
+      STATE_FILE: "/data/state.json"
+      DEFAULT_STATE_FILE: "/app/shared/default-state.json"
+      ADMIN_KEY: "${ADMIN_KEY:-marius-live}"
+
+volumes:
+  realtime_data:

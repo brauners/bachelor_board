@@ -1,6 +1,4 @@
+import defaultState from "../../shared/default-state.json";
 import type { Game } from "../types/game";
 
-export const sampleGames: Game[] = [
-  { id: "1", guestName: "Max", gameName: "Dosenwerfen", points: 1, winner: null },
-  { id: "2", guestName: "Tobi", gameName: "Beer Pong", points: 2, winner: null },
-];
+export const sampleGames: Game[] = defaultState.games;

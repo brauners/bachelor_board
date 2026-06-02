@@ -9,6 +9,12 @@ COPY . .
 EXPOSE 5173
 CMD ["npm", "run", "dev"]
 
+FROM base AS server-dev
+WORKDIR /app
+COPY . .
+EXPOSE 8787
+CMD ["npm", "run", "server:dev"]
+
 FROM base AS build
 WORKDIR /app
 COPY . .

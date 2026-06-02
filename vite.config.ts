@@ -9,5 +9,9 @@ export default defineConfig({
     watch: {
       usePolling: true
     }
+  },
+  preview: {
+    host: "127.0.0.1",
+    port: 4173
   }
 });
