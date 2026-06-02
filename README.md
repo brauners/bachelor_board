@@ -2,13 +2,13 @@
 
 Responsive Live-Scoreboard-Webapp fuer einen Junggesellenabschied im Stil einer TV-Gameshow. Die App nutzt ein kleines Realtime-Backend, damit Regie und Gaeste denselben Live-Spielstand sehen.
 
-## Start mit Docker
+## Docker Produktion
 
 ```bash
 docker compose up
 ```
 
-Danach ist die Anwendung unter `http://localhost:5173` erreichbar.
+Danach ist die Anwendung unter `http://localhost:8787` erreichbar.
 
 Wenn neue npm-Abhaengigkeiten dazugekommen sind, starte stattdessen:
 
@@ -16,7 +16,12 @@ Wenn neue npm-Abhaengigkeiten dazugekommen sind, starte stattdessen:
 docker compose up --build --renew-anon-volumes
 ```
 
-Der Realtime-Server ist zusaetzlich auf Port `8787` erreichbar und wird von Browsern direkt fuer Live-Sync genutzt.
+Das Produktions-Compose startet einen einzelnen Container, der Frontend, API und WebSocket gemeinsam ausliefert. Dieses Setup ist fuer Raspberry Pi und Ansible-Deployment gedacht.
+
+Relevante Produktionsvariablen:
+
+- `ADMIN_KEY`: PIN fuer den Regie-Login
+- `APP_PORT`: Host-Port fuer die Anwendung
 
 ## Landingpage und Regie
 
@@ -28,7 +33,7 @@ Der Realtime-Server ist zusaetzlich auf Port `8787` erreichbar und wird von Brow
 
 - Oeffne die App auf dem Regie-Laptop.
 - Kopiere den angezeigten Gast-Link.
-- Wenn du lokal ueber `localhost` arbeitest, muessen Gaeste stattdessen die lokale IP des Laptops im selben WLAN verwenden, zum Beispiel `http://192.168.0.25:5173`.
+- Wenn du lokal ueber `localhost` arbeitest, muessen Gaeste stattdessen die lokale IP des Laptops im selben WLAN verwenden, zum Beispiel `http://192.168.0.25:8787`.
 - Gaeste brauchen keinen Login.
 - Schreibzugriffe brauchen eine Admin-Session aus dem Regie-Login.
 
@@ -51,6 +56,14 @@ ADMIN_KEY=dein-geheimer-pin docker compose up
 - Vollbildmodus fuer TV/Beamer
 - Statistik, Count-up-Animationen und Konfetti bei abgeschlossenem Event
 
+## Entwicklung mit Docker
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Danach laufen Frontend und Realtime-Server lokal getrennt auf `http://localhost:5173` und `http://localhost:8787`.
+
 ## Entwicklung ohne Docker
 
 ```bash
@@ -67,4 +80,4 @@ Frontend und Realtime-Server laufen lokal getrennt auf `5173` und `8787`.
 npm run build
 ```
 
-Der Dockerfile enthaelt zusaetzlich einen `build`- und `preview`-Stage fuer Produktions-Builds.
+Der Dockerfile enthaelt getrennte Stages fuer Dev und eine schlanke Produktionslaufzeit.

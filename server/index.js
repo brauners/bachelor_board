@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { existsSync } from "node:fs";
 import express from "express";
 import { WebSocketServer } from "ws";
 
@@ -11,6 +12,7 @@ const DEFAULT_STATE_FILE =
   process.env.DEFAULT_STATE_FILE ?? path.resolve("shared/default-state.json");
 const ADMIN_KEY = process.env.ADMIN_KEY ?? "";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const CLIENT_DIST_DIR = process.env.CLIENT_DIST_DIR ?? path.resolve("dist");
 
 const clients = new Set();
 const sessions = new Map();
@@ -210,6 +212,19 @@ app.put("/api/state", requireAdmin, async (request, response) => {
     response.status(400).json({ error: message });
   }
 });
+
+if (existsSync(CLIENT_DIST_DIR)) {
+  app.use(express.static(CLIENT_DIST_DIR));
+
+  app.get("/{*any}", (request, response, next) => {
+    if (request.path.startsWith("/api/")) {
+      next();
+      return;
+    }
+
+    response.sendFile(path.join(CLIENT_DIST_DIR, "index.html"));
+  });
+}
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
