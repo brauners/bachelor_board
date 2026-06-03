@@ -6,10 +6,14 @@ Hinweis: Dieses Projekt wurde mit KI-Unterstuetzung erstellt und weiterentwickel
 
 ## Credits
 
-- Finale-Audio: "Victory Fanfare (8-Bit Thunder) 4" by Dylan Kelk/SilverIllusionist (Freesound)
-- Quelle: https://freesound.org/s/843046/
-- Lizenz: Attribution 4.0
-- Hinweis des Urhebers: "This mix has lots of 8-bit distortion."
+- Die Datei `public/audio/victory.wav` ist Drittmaterial:
+  "Victory Fanfare (8-Bit Thunder) 4" by Dylan Kelk/SilverIllusionist (Freesound),
+  Quelle: https://freesound.org/s/843046/,
+  lizenziert unter CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+  Unmodified.
+- Hinweis des Urhebers zur Audiodatei:
+  "This mix has lots of 8-bit distortion."
+- Diese Attribution gilt fuer die genannte Audiodatei, nicht fuer den restlichen Projektcode.
 
 ## Docker Produktion
 
