@@ -6,13 +6,17 @@ Hinweis: Dieses Projekt wurde mit KI-Unterstuetzung erstellt und weiterentwickel
 
 ## Credits
 
-- Die Datei `public/audio/victory.wav` ist Drittmaterial:
+- Die Datei `public/audio/843046__silverillusionist__victory-fanfare-8-bit-thunder-4.wav` ist Drittmaterial:
   "Victory Fanfare (8-Bit Thunder) 4" by Dylan Kelk/SilverIllusionist (Freesound),
   Quelle: https://freesound.org/s/843046/,
   lizenziert unter CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
   Unmodified.
 - Hinweis des Urhebers zur Audiodatei:
   "This mix has lots of 8-bit distortion."
+- Weitere Soundboard-Dateien unter `public/audio/`:
+  `Tada!` by Yoshicakes77 -- https://freesound.org/s/850021/ -- License: Creative Commons 0
+  `drumroll.wav` by adriann -- https://freesound.org/s/191718/ -- License: Creative Commons 0
+  `DJ airhorn sound` by pfranzen -- https://freesound.org/s/528807/ -- License: Creative Commons 0
 - Diese Attribution gilt fuer die genannte Audiodatei, nicht fuer den restlichen Projektcode.
 
 ## Docker Produktion
@@ -74,6 +78,7 @@ ADMIN_KEY=dein-geheimer-pin docker compose up
 - Import und Export als JSON
 - Vollbildmodus fuer TV/Beamer
 - Statistik, Count-up-Animationen und Konfetti bei abgeschlossenem Event
+- Soundboard mit zentraler Regie-Freigabe
 
 ## Entwicklung mit Docker
 

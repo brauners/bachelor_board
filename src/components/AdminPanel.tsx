@@ -10,6 +10,7 @@ type GameDraft = {
 
 type AdminPanelProps = {
   phase: "setup" | "live";
+  soundboardEnabled: boolean;
   games: Game[];
   unassignedGames: number;
   canStartEvent: boolean;
@@ -26,6 +27,7 @@ type AdminPanelProps = {
   onResetAll: () => void;
   onStartEvent: () => void;
   onAssignPendingPoints: () => void;
+  onSetSoundboardEnabled: (enabled: boolean) => void;
 };
 
 const emptyDraft: GameDraft = {
@@ -36,6 +38,7 @@ const emptyDraft: GameDraft = {
 
 export function AdminPanel({
   phase,
+  soundboardEnabled,
   games,
   unassignedGames,
   canStartEvent,
@@ -51,7 +54,8 @@ export function AdminPanel({
   onImport,
   onResetAll,
   onStartEvent,
-  onAssignPendingPoints
+  onAssignPendingPoints,
+  onSetSoundboardEnabled
 }: AdminPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState<GameDraft>(emptyDraft);
@@ -133,6 +137,18 @@ export function AdminPanel({
             className="rounded-full border border-white/15 px-4 py-2 text-sm uppercase tracking-[0.2em] text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             Reihenfolge mischen
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetSoundboardEnabled(!soundboardEnabled)}
+            className={[
+              "rounded-full px-4 py-2 text-sm uppercase tracking-[0.2em]",
+              soundboardEnabled
+                ? "border border-accent-cyan/40 bg-accent-cyan/10 text-accent-cyan"
+                : "border border-accent-coral/40 bg-accent-coral/10 text-accent-coral"
+            ].join(" ")}
+          >
+            {soundboardEnabled ? "Soundboard aktiv" : "Soundboard gesperrt"}
           </button>
           <button
             type="button"
@@ -239,6 +255,9 @@ export function AdminPanel({
             : unassignedGames > 0
               ? `${unassignedGames} neue Spiele warten noch auf eine Punktezuweisung.`
               : "Alle sichtbaren Punkte sind fix und bleiben auch bei Umordnungen erhalten."}
+        </div>
+        <div className="mt-2">
+          Soundboard: {soundboardEnabled ? "freigegeben" : "gesperrt"}
         </div>
       </div>
 

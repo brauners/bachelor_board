@@ -14,6 +14,7 @@ const ADMIN_KEY = process.env.ADMIN_KEY ?? "";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const CLIENT_DIST_DIR = process.env.CLIENT_DIST_DIR ?? path.resolve("dist");
 const VICTORY_CUE_LEAD_MS = 1500;
+const SOUNDBOARD_CUE_LEAD_MS = 350;
 
 const clients = new Set();
 const sessions = new Map();
@@ -29,6 +30,7 @@ function inferPhase(games) {
 function normalizeState(state) {
   return {
     phase: state.phase === "live" || state.phase === "setup" ? state.phase : inferPhase(state.games),
+    soundboardEnabled: state.soundboardEnabled === false ? false : true,
     games: state.games
   };
 }
@@ -40,6 +42,10 @@ function validateState(state) {
 
   if (state.phase !== "setup" && state.phase !== "live") {
     throw new Error("Invalid phase");
+  }
+
+  if (typeof state.soundboardEnabled !== "boolean") {
+    throw new Error("Invalid soundboardEnabled");
   }
 
   if (state.games.length > 200) {
@@ -177,6 +183,20 @@ function broadcastVictoryCue() {
   }
 }
 
+function broadcastSoundboardCue(soundId) {
+  const message = JSON.stringify({
+    type: "soundboard_audio",
+    soundId,
+    playAt: Date.now() + SOUNDBOARD_CUE_LEAD_MS
+  });
+
+  for (const client of clients) {
+    if (client.readyState === 1) {
+      client.send(message);
+    }
+  }
+}
+
 const app = express();
 app.use((request, response, next) => {
   response.setHeader("Access-Control-Allow-Origin", "*");
@@ -238,6 +258,24 @@ app.post("/api/auth/logout", (request, response) => {
   }
 
   response.status(204).end();
+});
+
+app.post("/api/soundboard", (request, response) => {
+  const body = request.body;
+
+  if (!isRecord(body) || typeof body.soundId !== "string" || body.soundId.trim() === "") {
+    response.status(400).json({ error: "soundId fehlt." });
+    return;
+  }
+
+  if (!currentState?.soundboardEnabled) {
+    response.status(409).json({ error: "Soundboard ist deaktiviert." });
+    return;
+  }
+
+  broadcastSoundboardCue(body.soundId.trim());
+  response.setHeader("X-Server-Time", String(Date.now()));
+  response.status(202).json({ ok: true });
 });
 
 app.put("/api/state", requireAdmin, async (request, response) => {

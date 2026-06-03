@@ -6,6 +6,7 @@ export const STORAGE_KEY = "bachelor-board-state";
 
 const fallbackState: ScoreboardState = {
   phase: "setup",
+  soundboardEnabled: true,
   games: sampleGames
 };
 
