@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Game } from "../types/game";
 
 type GameDraft = {
@@ -11,6 +11,8 @@ type GameDraft = {
 type AdminPanelProps = {
   phase: "setup" | "live";
   soundboardEnabled: boolean;
+  nextGameCueDurationMs: number;
+  nextGameCueHoldMs: number;
   games: Game[];
   unassignedGames: number;
   canStartEvent: boolean;
@@ -28,6 +30,9 @@ type AdminPanelProps = {
   onStartEvent: () => void;
   onAssignPendingPoints: () => void;
   onSetSoundboardEnabled: (enabled: boolean) => void;
+  onSetNextGameCueDurationMs: (durationMs: number) => void;
+  onSetNextGameCueHoldMs: (holdMs: number) => void;
+  onTriggerNextGameIntro: () => void;
 };
 
 const emptyDraft: GameDraft = {
@@ -39,6 +44,8 @@ const emptyDraft: GameDraft = {
 export function AdminPanel({
   phase,
   soundboardEnabled,
+  nextGameCueDurationMs,
+  nextGameCueHoldMs,
   games,
   unassignedGames,
   canStartEvent,
@@ -55,12 +62,53 @@ export function AdminPanel({
   onResetAll,
   onStartEvent,
   onAssignPendingPoints,
-  onSetSoundboardEnabled
+  onSetSoundboardEnabled,
+  onSetNextGameCueDurationMs,
+  onSetNextGameCueHoldMs,
+  onTriggerNextGameIntro
 }: AdminPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState<GameDraft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [cueDurationSeconds, setCueDurationSeconds] = useState(
+    String((nextGameCueDurationMs / 1000).toFixed(1))
+  );
+  const [cueHoldSeconds, setCueHoldSeconds] = useState(
+    String((nextGameCueHoldMs / 1000).toFixed(1))
+  );
+
+  useEffect(() => {
+    setCueDurationSeconds((nextGameCueDurationMs / 1000).toFixed(1));
+  }, [nextGameCueDurationMs]);
+
+  useEffect(() => {
+    setCueHoldSeconds((nextGameCueHoldMs / 1000).toFixed(1));
+  }, [nextGameCueHoldMs]);
+
+  const commitCueDuration = () => {
+    const parsed = Number(cueDurationSeconds.replace(",", "."));
+
+    if (!Number.isFinite(parsed)) {
+      setCueDurationSeconds((nextGameCueDurationMs / 1000).toFixed(1));
+      return;
+    }
+
+    const clampedSeconds = Math.min(15, Math.max(1.5, parsed));
+    onSetNextGameCueDurationMs(Math.round(clampedSeconds * 1000));
+  };
+
+  const commitCueHold = () => {
+    const parsed = Number(cueHoldSeconds.replace(",", "."));
+
+    if (!Number.isFinite(parsed)) {
+      setCueHoldSeconds((nextGameCueHoldMs / 1000).toFixed(1));
+      return;
+    }
+
+    const clampedSeconds = Math.min(10, Math.max(0, parsed));
+    onSetNextGameCueHoldMs(Math.round(clampedSeconds * 1000));
+  };
 
   const handleSubmit = (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
@@ -184,6 +232,58 @@ export function AdminPanel({
               event.target.value = "";
             }}
           />
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-[1.5rem] border border-accent-gold/20 bg-stage-900/70 p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.3em] text-accent-gold/70">
+              Naechstes-Duell-Intro
+            </div>
+            <p className="mt-2 text-sm text-white/65">
+              Triggert eine grosse Anmoderation mit Trommelwirbel. Kann jederzeit erneut gestartet
+              werden.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.2em] text-white/55">
+              Zoom-Laenge in Sekunden
+              <input
+                type="number"
+                min="1.5"
+                max="15"
+                step="0.1"
+                inputMode="decimal"
+                value={cueDurationSeconds}
+                onChange={(event) => setCueDurationSeconds(event.target.value)}
+                onBlur={commitCueDuration}
+                className="w-40 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-accent-gold"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.2em] text-white/55">
+              Haltezeit in Sekunden
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="0.1"
+                inputMode="decimal"
+                value={cueHoldSeconds}
+                onChange={(event) => setCueHoldSeconds(event.target.value)}
+                onBlur={commitCueHold}
+                className="w-40 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none transition focus:border-accent-gold"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={onTriggerNextGameIntro}
+              disabled={games.every((game) => game.winner !== null)}
+              className="rounded-xl bg-accent-gold px-5 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-stage-950 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Naechstes Duell zeigen
+            </button>
+          </div>
         </div>
       </div>
 

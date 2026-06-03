@@ -1,15 +1,17 @@
 {
   "phase": "setup",
   "soundboardEnabled": true,
+  "nextGameCueDurationMs": 4500,
+  "nextGameCueHoldMs": 1500,
   "games": [
-    { "id": "1", "guestName": "Flo", "gameName": "_", "points": null, "winner": null },
-    { "id": "2", "guestName": "Ben", "gameName": "_", "points": null, "winner": null },
-    { "id": "3", "guestName": "Chris Rem.", "gameName": "_", "points": null, "winner": null },
-    { "id": "4", "guestName": "Gianni", "gameName": "_", "points": null, "winner": null },
-    { "id": "5", "guestName": "Lena", "gameName": "_", "points": null, "winner": null },
-    { "id": "6", "guestName": "Patrick", "gameName": "_", "points": null, "winner": null },
-    { "id": "7", "guestName": "Chris Rei.", "gameName": "_", "points": null, "winner": null },
-    { "id": "8", "guestName": "Flitz", "gameName": "_", "points": null, "winner": null },
-    { "id": "9", "guestName": "Andre", "gameName": "_", "points": null, "winner": null }
+    { "id": "1", "guestName": "Flo", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "2", "guestName": "Ben", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "3", "guestName": "Chris Rem.", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "4", "guestName": "Gianni", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "5", "guestName": "Lena", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "6", "guestName": "Patrick", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "7", "guestName": "Chris Rei.", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "8", "guestName": "Flitz", "gameName": "_", "points": null, "winner": null, "revealed": false },
+    { "id": "9", "guestName": "Andre", "gameName": "_", "points": null, "winner": null, "revealed": false }
   ]
 }

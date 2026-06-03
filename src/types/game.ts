@@ -7,11 +7,14 @@ export type Game = {
   gameName: string;
   points: number | null;
   winner: Winner;
+  revealed: boolean;
 };
 
 export type ScoreboardState = {
   phase: EventPhase;
   soundboardEnabled: boolean;
+  nextGameCueDurationMs: number;
+  nextGameCueHoldMs: number;
   games: Game[];
 };
 

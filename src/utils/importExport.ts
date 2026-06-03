@@ -14,7 +14,7 @@ function validateGame(value: unknown, index: number) {
     throw new Error(`Ungueltiges Spiel an Position ${index + 1}`);
   }
 
-  const { id, guestName, gameName, points, winner } = value;
+  const { id, guestName, gameName, points, winner, revealed } = value;
 
   if (typeof id !== "string" || id.trim() === "") {
     throw new Error(`Spiel ${index + 1} hat keine gueltige ID`);
@@ -41,6 +41,10 @@ function validateGame(value: unknown, index: number) {
 
   if (winner !== null && (typeof winner !== "string" || !allowedWinners.has(winner))) {
     throw new Error(`Spiel ${index + 1} hat einen ungueltigen Gewinner`);
+  }
+
+  if (revealed !== undefined && typeof revealed !== "boolean") {
+    throw new Error(`Spiel ${index + 1} hat einen ungueltigen Reveal-Status`);
   }
 }
 
@@ -74,6 +78,26 @@ export function parseImportedState(content: string): ScoreboardState {
     throw new Error("Ungueltige Soundboard-Konfiguration");
   }
 
+  if (
+    parsed.nextGameCueDurationMs !== undefined &&
+    (typeof parsed.nextGameCueDurationMs !== "number" ||
+      !Number.isFinite(parsed.nextGameCueDurationMs) ||
+      parsed.nextGameCueDurationMs < 1500 ||
+      parsed.nextGameCueDurationMs > 15000)
+  ) {
+    throw new Error("Ungueltige Intro-Dauer");
+  }
+
+  if (
+    parsed.nextGameCueHoldMs !== undefined &&
+    (typeof parsed.nextGameCueHoldMs !== "number" ||
+      !Number.isFinite(parsed.nextGameCueHoldMs) ||
+      parsed.nextGameCueHoldMs < 0 ||
+      parsed.nextGameCueHoldMs > 10000)
+  ) {
+    throw new Error("Ungueltige Haltezeit des Intros");
+  }
+
   if (parsed.games.length > MAX_GAMES) {
     throw new Error(`Zu viele Spiele in der Importdatei. Maximal ${MAX_GAMES} erlaubt.`);
   }
@@ -83,6 +107,8 @@ export function parseImportedState(content: string): ScoreboardState {
   return normalizeState({
     phase: parsed.phase,
     soundboardEnabled: parsed.soundboardEnabled,
+    nextGameCueDurationMs: parsed.nextGameCueDurationMs,
+    nextGameCueHoldMs: parsed.nextGameCueHoldMs,
     games: parsed.games
   });
 }

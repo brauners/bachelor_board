@@ -5,11 +5,12 @@ import { AdminPanel } from "../components/AdminPanel";
 import { CurrentGameCard } from "../components/CurrentGameCard";
 import { GameList } from "../components/GameList";
 import { GuestQrCode } from "../components/GuestQrCode";
+import { NextGameIntroOverlay } from "../components/NextGameIntroOverlay";
 import { ScorePanel } from "../components/ScorePanel";
 import { StatsGrid } from "../components/StatsGrid";
 import { useFullscreen } from "../hooks/useFullscreen";
 import { useScoreboard } from "../store/useScoreboard";
-import type { ScoreboardState } from "../types/game";
+import type { Game, ScoreboardState } from "../types/game";
 import {
   enableAudioPlayback,
   isAudioPlaybackEnabled,
@@ -25,6 +26,8 @@ export function HomePage() {
   const {
     phase,
     soundboardEnabled,
+    nextGameCueDurationMs,
+    nextGameCueHoldMs,
     games,
     totals,
     stats,
@@ -54,7 +57,10 @@ export function HomePage() {
     startEvent,
     assignPendingPoints,
     setSoundboardEnabled,
-    triggerSoundboard
+    setNextGameCueDurationMs,
+    setNextGameCueHoldMs,
+    triggerSoundboard,
+    triggerNextGameIntro
   } = useScoreboard();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const [showAdmin, setShowAdmin] = useState(true);
@@ -63,6 +69,12 @@ export function HomePage() {
   const [showSoundboard, setShowSoundboard] = useState(false);
   const [loginPin, setLoginPin] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [activeNextGameIntro, setActiveNextGameIntro] = useState<{
+    game: Game;
+    introDurationMs: number;
+    holdDurationMs: number;
+    runId: number;
+  } | null>(null);
   const [soundPreference, setSoundPreference] = useState<"pending" | "enabled" | "muted">(() => {
     if (typeof window === "undefined") {
       return "pending";
@@ -75,6 +87,7 @@ export function HomePage() {
   const confettiTriggeredRef = useRef(false);
   const victoryAudioTimerRef = useRef<number | null>(null);
   const soundboardAudioTimersRef = useRef<number[]>([]);
+  const nextGameIntroTimerRef = useRef<number | null>(null);
 
   const winnerLabel = useMemo(() => {
     if (totals.bachelor === totals.guest) {
@@ -198,18 +211,71 @@ export function HomePage() {
       soundboardAudioTimersRef.current.push(timerId);
     };
 
+    const handleNextGameIntro = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        delayMs?: number;
+        durationMs?: number;
+        holdMs?: number;
+        game?: Game;
+      }>;
+      const delayMs = Math.max(0, customEvent.detail?.delayMs ?? 0);
+      const introDurationMs = Math.max(1500, customEvent.detail?.durationMs ?? 4500);
+      const holdDurationMs = Math.max(0, customEvent.detail?.holdMs ?? 1500);
+      const game = customEvent.detail?.game;
+
+      if (!game) {
+        return;
+      }
+
+      if (nextGameIntroTimerRef.current !== null) {
+        window.clearTimeout(nextGameIntroTimerRef.current);
+        nextGameIntroTimerRef.current = null;
+      }
+
+      setActiveNextGameIntro(null);
+
+      const timerId = window.setTimeout(() => {
+        setActiveNextGameIntro({
+          game,
+          introDurationMs,
+          holdDurationMs,
+          runId: Date.now()
+        });
+
+        if (soundPreference === "enabled") {
+          void playSoundboardCue("drumroll");
+        }
+
+        nextGameIntroTimerRef.current = window.setTimeout(() => {
+          setActiveNextGameIntro(null);
+          nextGameIntroTimerRef.current = null;
+        }, introDurationMs + holdDurationMs);
+      }, delayMs);
+
+      nextGameIntroTimerRef.current = timerId;
+    };
+
     window.addEventListener("bachelor-board:victory-audio", handleVictoryAudio);
     window.addEventListener("bachelor-board:soundboard-audio", handleSoundboardAudio);
+    window.addEventListener("bachelor-board:next-game-intro", handleNextGameIntro as EventListener);
 
     return () => {
       window.removeEventListener("bachelor-board:victory-audio", handleVictoryAudio);
       window.removeEventListener("bachelor-board:soundboard-audio", handleSoundboardAudio);
+      window.removeEventListener(
+        "bachelor-board:next-game-intro",
+        handleNextGameIntro as EventListener
+      );
       if (victoryAudioTimerRef.current !== null) {
         window.clearTimeout(victoryAudioTimerRef.current);
         victoryAudioTimerRef.current = null;
       }
       soundboardAudioTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
       soundboardAudioTimersRef.current = [];
+      if (nextGameIntroTimerRef.current !== null) {
+        window.clearTimeout(nextGameIntroTimerRef.current);
+        nextGameIntroTimerRef.current = null;
+      }
     };
   }, [soundPreference]);
 
@@ -244,7 +310,13 @@ export function HomePage() {
   };
 
   const handleExport = () => {
-    const state: ScoreboardState = { phase, soundboardEnabled, games };
+    const state: ScoreboardState = {
+      phase,
+      soundboardEnabled,
+      nextGameCueDurationMs,
+      nextGameCueHoldMs,
+      games
+    };
     downloadState(state);
   };
 
@@ -305,6 +377,13 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen bg-stage-radial text-white">
+      <NextGameIntroOverlay
+        key={activeNextGameIntro?.runId ?? "idle"}
+        visible={activeNextGameIntro !== null}
+        game={activeNextGameIntro?.game ?? null}
+        introDurationMs={activeNextGameIntro?.introDurationMs ?? nextGameCueDurationMs}
+        holdDurationMs={activeNextGameIntro?.holdDurationMs ?? nextGameCueHoldMs}
+      />
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -590,6 +669,8 @@ export function HomePage() {
           <AdminPanel
             phase={phase}
             soundboardEnabled={soundboardEnabled}
+            nextGameCueDurationMs={nextGameCueDurationMs}
+            nextGameCueHoldMs={nextGameCueHoldMs}
             games={games}
             unassignedGames={unassignedGames}
             canStartEvent={canStartEvent}
@@ -610,6 +691,11 @@ export function HomePage() {
             }}
             onAssignPendingPoints={assignPendingPoints}
             onSetSoundboardEnabled={setSoundboardEnabled}
+            onSetNextGameCueDurationMs={setNextGameCueDurationMs}
+            onSetNextGameCueHoldMs={setNextGameCueHoldMs}
+            onTriggerNextGameIntro={() => {
+              void triggerNextGameIntro();
+            }}
           />
         ) : null}
 

@@ -7,6 +7,8 @@ export const STORAGE_KEY = "bachelor-board-state";
 const fallbackState: ScoreboardState = {
   phase: "setup",
   soundboardEnabled: true,
+  nextGameCueDurationMs: 4500,
+  nextGameCueHoldMs: 1500,
   games: sampleGames
 };
 
