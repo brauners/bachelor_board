@@ -7,7 +7,7 @@ let sharedAudioContext: AudioContext | null = null;
 let victorySampleAudio: HTMLAudioElement | null = null;
 let audioPlaybackEnabled = false;
 
-const DEFAULT_VICTORY_SAMPLE_URL = "/audio/victory.wav";
+const DEFAULT_VICTORY_SAMPLE_URL = "/audio/843046__silverillusionist__victory-fanfare-8-bit-thunder-4.wav";
 
 function getAudioContextCtor(): typeof AudioContext | null {
   if (typeof window === "undefined") {

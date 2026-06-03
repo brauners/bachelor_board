@@ -2,5 +2,3 @@ node_modules
 dist
 .DS_Store
 *.tsbuildinfo
-public/audio/*
-!public/audio/README.md

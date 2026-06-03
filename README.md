@@ -4,6 +4,13 @@ Responsive Live-Scoreboard-Webapp fuer einen Junggesellenabschied im Stil einer 
 
 Hinweis: Dieses Projekt wurde mit KI-Unterstuetzung erstellt und weiterentwickelt.
 
+## Credits
+
+- Finale-Audio: "Victory Fanfare (8-Bit Thunder) 4" by Dylan Kelk/SilverIllusionist (Freesound)
+- Quelle: https://freesound.org/s/843046/
+- Lizenz: Attribution 4.0
+- Hinweis des Urhebers: "This mix has lots of 8-bit distortion."
+
 ## Docker Produktion
 
 ```bash
