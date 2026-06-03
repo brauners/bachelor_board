@@ -1,5 +1,6 @@
 {
   "phase": "setup",
+  "soundboardEnabled": true,
   "games": [
     { "id": "1", "guestName": "Flo", "gameName": "_", "points": null, "winner": null },
     { "id": "2", "guestName": "Ben", "gameName": "_", "points": null, "winner": null },

@@ -3,11 +3,25 @@ type AudioWindow = Window &
     webkitAudioContext?: typeof AudioContext;
   };
 
+export const SOUNDBOARD_SOUNDS = [
+  { id: "alarm", label: "Airhorn" },
+  { id: "drumroll", label: "Trommelwirbel" },
+  { id: "ta-da", label: "Ta-Da" }
+] as const;
+
+export type SoundboardSoundId = (typeof SOUNDBOARD_SOUNDS)[number]["id"];
+
 let sharedAudioContext: AudioContext | null = null;
 let victorySampleAudio: HTMLAudioElement | null = null;
+const soundboardSampleAudios = new Map<SoundboardSoundId, HTMLAudioElement>();
 let audioPlaybackEnabled = false;
 
 const DEFAULT_VICTORY_SAMPLE_URL = "/audio/843046__silverillusionist__victory-fanfare-8-bit-thunder-4.wav";
+const DEFAULT_SOUNDBOARD_SAMPLE_URLS: Record<SoundboardSoundId, string> = {
+  alarm: "/audio/528807__pfranzen__dj-airhorn-sound.ogg",
+  drumroll: "/audio/191718__adriann__drumroll.wav",
+  "ta-da": "/audio/850021__yoshicakes77__tada.wav"
+};
 
 function getAudioContextCtor(): typeof AudioContext | null {
   if (typeof window === "undefined") {
@@ -50,6 +64,26 @@ function getVictorySampleAudio(): HTMLAudioElement | null {
   return victorySampleAudio;
 }
 
+function getSoundboardSampleUrl(soundId: SoundboardSoundId): string {
+  return DEFAULT_SOUNDBOARD_SAMPLE_URLS[soundId];
+}
+
+function getSoundboardSampleAudio(soundId: SoundboardSoundId): HTMLAudioElement | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const existingAudio = soundboardSampleAudios.get(soundId);
+  if (existingAudio) {
+    return existingAudio;
+  }
+
+  const sampleAudio = new Audio(getSoundboardSampleUrl(soundId));
+  sampleAudio.preload = "auto";
+  soundboardSampleAudios.set(soundId, sampleAudio);
+  return sampleAudio;
+}
+
 export async function unlockAudio(): Promise<void> {
   const context = getSharedAudioContext();
 
@@ -66,6 +100,9 @@ export async function unlockAudio(): Promise<void> {
   }
 
   getVictorySampleAudio()?.load();
+  for (const sound of SOUNDBOARD_SOUNDS) {
+    getSoundboardSampleAudio(sound.id)?.load();
+  }
 }
 
 export async function enableAudioPlayback(): Promise<boolean> {
@@ -106,6 +143,30 @@ export async function enableAudioPlayback(): Promise<boolean> {
 
 export function isAudioPlaybackEnabled(): boolean {
   return audioPlaybackEnabled;
+}
+
+function scheduleTone(
+  context: AudioContext,
+  startAt: number,
+  duration: number,
+  frequency: number,
+  gainValue: number,
+  type: OscillatorType = "triangle"
+) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, startAt);
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(gainValue, startAt + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(startAt);
+  oscillator.stop(startAt + duration + 0.03);
 }
 
 export async function playVictoryFanfare(): Promise<void> {
@@ -175,5 +236,72 @@ export async function playVictoryCue(): Promise<void> {
 
   if (!sampleStarted) {
     await playVictoryFanfare();
+  }
+}
+
+async function playSoundboardSample(soundId: SoundboardSoundId): Promise<boolean> {
+  const sampleAudio = getSoundboardSampleAudio(soundId);
+
+  if (!sampleAudio || !audioPlaybackEnabled) {
+    return false;
+  }
+
+  try {
+    sampleAudio.pause();
+    sampleAudio.currentTime = 0;
+    await sampleAudio.play();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function playSoundboardCue(soundId: SoundboardSoundId): Promise<void> {
+  const sampleStarted = await playSoundboardSample(soundId);
+
+  if (sampleStarted) {
+    return;
+  }
+
+  if (!audioPlaybackEnabled) {
+    return;
+  }
+
+  const context = getSharedAudioContext();
+
+  if (!context) {
+    return;
+  }
+
+  if (context.state === "suspended") {
+    try {
+      await context.resume();
+    } catch {
+      return;
+    }
+  }
+
+  const startAt = context.currentTime + 0.02;
+
+  switch (soundId) {
+    case "alarm":
+      scheduleTone(context, startAt, 0.16, 880, 0.12, "square");
+      scheduleTone(context, startAt + 0.22, 0.16, 660, 0.12, "square");
+      scheduleTone(context, startAt + 0.44, 0.16, 880, 0.12, "square");
+      scheduleTone(context, startAt + 0.66, 0.16, 660, 0.12, "square");
+      break;
+    case "drumroll":
+      for (let index = 0; index < 10; index += 1) {
+        scheduleTone(context, startAt + index * 0.06, 0.045, 110 + index * 8, 0.09, "square");
+      }
+      scheduleTone(context, startAt + 0.72, 0.28, 220, 0.14, "triangle");
+      break;
+    case "ta-da":
+      scheduleTone(context, startAt, 0.14, 523.25, 0.12);
+      scheduleTone(context, startAt + 0.16, 0.16, 659.25, 0.12);
+      scheduleTone(context, startAt + 0.34, 0.32, 783.99, 0.14);
+      break;
+    default:
+      break;
   }
 }

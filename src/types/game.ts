@@ -11,6 +11,7 @@ export type Game = {
 
 export type ScoreboardState = {
   phase: EventPhase;
+  soundboardEnabled: boolean;
   games: Game[];
 };
 

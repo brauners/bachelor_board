@@ -67,6 +67,13 @@ export function parseImportedState(content: string): ScoreboardState {
     throw new Error("Ungueltige Event-Phase");
   }
 
+  if (
+    parsed.soundboardEnabled !== undefined &&
+    typeof parsed.soundboardEnabled !== "boolean"
+  ) {
+    throw new Error("Ungueltige Soundboard-Konfiguration");
+  }
+
   if (parsed.games.length > MAX_GAMES) {
     throw new Error(`Zu viele Spiele in der Importdatei. Maximal ${MAX_GAMES} erlaubt.`);
   }
@@ -75,6 +82,7 @@ export function parseImportedState(content: string): ScoreboardState {
 
   return normalizeState({
     phase: parsed.phase,
+    soundboardEnabled: parsed.soundboardEnabled,
     games: parsed.games
   });
 }

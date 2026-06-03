@@ -1,6 +1,6 @@
 The finale sample used by this project is:
 
-- `public/audio/victory.wav`
+- `public/audio/843046__silverillusionist__victory-fanfare-8-bit-thunder-4.wav`
 
 Attribution:
 
@@ -12,10 +12,21 @@ Attribution:
 - Requested credit text:
   "Victory Fanfare (8-Bit Thunder) 4" by Dylan Kelk/SilverIllusionist (Freesound)
 
-This attribution applies to `public/audio/victory.wav` only.
+This attribution applies to `public/audio/843046__silverillusionist__victory-fanfare-8-bit-thunder-4.wav` only.
 
 The app will try to play this sample when all games are finished.
 If the file is missing or playback fails, it falls back to the built-in fanfare.
+
+Soundboard samples:
+
+- `Airhorn`: `public/audio/528807__pfranzen__dj-airhorn-sound.ogg`
+  `DJ airhorn sound` by pfranzen -- https://freesound.org/s/528807/ -- License: Creative Commons 0
+- `Trommelwirbel`: `public/audio/191718__adriann__drumroll.wav`
+  `drumroll.wav` by adriann -- https://freesound.org/s/191718/ -- License: Creative Commons 0
+- `Ta-Da`: `public/audio/850021__yoshicakes77__tada.wav`
+  `Tada!` by Yoshicakes77 -- https://freesound.org/s/850021/ -- License: Creative Commons 0
+
+If one of these files is missing or playback fails, the app falls back to the built-in synthetic placeholder sound for that button.
 
 Optional:
 

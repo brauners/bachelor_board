@@ -10,7 +10,13 @@ import { StatsGrid } from "../components/StatsGrid";
 import { useFullscreen } from "../hooks/useFullscreen";
 import { useScoreboard } from "../store/useScoreboard";
 import type { ScoreboardState } from "../types/game";
-import { enableAudioPlayback, isAudioPlaybackEnabled, playVictoryCue } from "../utils/audio";
+import {
+  enableAudioPlayback,
+  isAudioPlaybackEnabled,
+  playSoundboardCue,
+  playVictoryCue,
+  SOUNDBOARD_SOUNDS
+} from "../utils/audio";
 import { downloadState, parseImportedState } from "../utils/importExport";
 
 const SOUND_SESSION_KEY = "bachelor-board-sound-session";
@@ -18,6 +24,7 @@ const SOUND_SESSION_KEY = "bachelor-board-sound-session";
 export function HomePage() {
   const {
     phase,
+    soundboardEnabled,
     games,
     totals,
     stats,
@@ -45,12 +52,15 @@ export function HomePage() {
     importState,
     resetAll,
     startEvent,
-    assignPendingPoints
+    assignPendingPoints,
+    setSoundboardEnabled,
+    triggerSoundboard
   } = useScoreboard();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const [showAdmin, setShowAdmin] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [showSharePanel, setShowSharePanel] = useState(false);
+  const [showSoundboard, setShowSoundboard] = useState(false);
   const [loginPin, setLoginPin] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [soundPreference, setSoundPreference] = useState<"pending" | "enabled" | "muted">(() => {
@@ -64,6 +74,7 @@ export function HomePage() {
   const [soundError, setSoundError] = useState<string | null>(null);
   const confettiTriggeredRef = useRef(false);
   const victoryAudioTimerRef = useRef<number | null>(null);
+  const soundboardAudioTimersRef = useRef<number[]>([]);
 
   const winnerLabel = useMemo(() => {
     if (totals.bachelor === totals.guest) {
@@ -161,14 +172,44 @@ export function HomePage() {
       }, delayMs);
     };
 
+    const handleSoundboardAudio = (event: Event) => {
+      if (soundPreference !== "enabled") {
+        return;
+      }
+
+      const customEvent = event as CustomEvent<{
+        delayMs?: number;
+        soundId?: (typeof SOUNDBOARD_SOUNDS)[number]["id"];
+      }>;
+      const delayMs = Math.max(0, customEvent.detail?.delayMs ?? 0);
+      const soundId = customEvent.detail?.soundId;
+
+      if (!soundId) {
+        return;
+      }
+
+      const timerId = window.setTimeout(() => {
+        void playSoundboardCue(soundId);
+        soundboardAudioTimersRef.current = soundboardAudioTimersRef.current.filter(
+          (current) => current !== timerId
+        );
+      }, delayMs);
+
+      soundboardAudioTimersRef.current.push(timerId);
+    };
+
     window.addEventListener("bachelor-board:victory-audio", handleVictoryAudio);
+    window.addEventListener("bachelor-board:soundboard-audio", handleSoundboardAudio);
 
     return () => {
       window.removeEventListener("bachelor-board:victory-audio", handleVictoryAudio);
+      window.removeEventListener("bachelor-board:soundboard-audio", handleSoundboardAudio);
       if (victoryAudioTimerRef.current !== null) {
         window.clearTimeout(victoryAudioTimerRef.current);
         victoryAudioTimerRef.current = null;
       }
+      soundboardAudioTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      soundboardAudioTimersRef.current = [];
     };
   }, [soundPreference]);
 
@@ -203,7 +244,7 @@ export function HomePage() {
   };
 
   const handleExport = () => {
-    const state: ScoreboardState = { phase, games };
+    const state: ScoreboardState = { phase, soundboardEnabled, games };
     downloadState(state);
   };
 
@@ -283,6 +324,13 @@ export function HomePage() {
               className={topButtonClass}
             >
               {isFullscreen ? "Vollbild aus" : "Vollbild"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSoundboard((current) => !current)}
+              className={topButtonClass}
+            >
+              {showSoundboard ? "Soundboard zu" : "Soundboard"}
             </button>
             <button
               type="button"
@@ -367,6 +415,37 @@ export function HomePage() {
           </motion.section>
         ) : null}
 
+        {showSoundboard ? (
+          <motion.section
+            layout
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[2rem] border border-white/10 bg-white/6 p-5 shadow-neon backdrop-blur"
+          >
+            <div className="text-sm uppercase tracking-[0.4em] text-white/50">Soundboard</div>
+            <div className="mt-2 text-sm text-white/65">
+              {soundboardEnabled
+                ? "Loest kurze Sounds auf allen verbundenen Clients aus."
+                : "Das Soundboard ist von der Regie gerade deaktiviert."}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {SOUNDBOARD_SOUNDS.map((sound) => (
+                <button
+                  key={sound.id}
+                  type="button"
+                  onClick={() => {
+                    void triggerSoundboard(sound.id);
+                  }}
+                  disabled={!soundboardEnabled}
+                  className="rounded-full border border-white/15 bg-stage-900/70 px-4 py-2 text-sm uppercase tracking-[0.2em] text-white/85 transition hover:border-accent-gold hover:text-accent-gold disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  {sound.label}
+                </button>
+              ))}
+            </div>
+          </motion.section>
+        ) : null}
+
         {showSharePanel || showLogin || isAdminAuthenticated ? (
           <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
             {showSharePanel ? (
@@ -425,6 +504,9 @@ export function HomePage() {
                 : unassignedGames > 0
                   ? `${unassignedGames} neue Spiele haben noch keine Punkte.`
                   : "Alle Punktwerte sind fest zugewiesen."}
+            </div>
+            <div className="mt-3 text-sm text-white/60">
+              Soundboard: {soundboardEnabled ? "aktiv" : "deaktiviert"}
             </div>
 
               {!isAdminAuthenticated && showLogin ? (
@@ -507,6 +589,7 @@ export function HomePage() {
         {isAdminAuthenticated && showAdmin ? (
           <AdminPanel
             phase={phase}
+            soundboardEnabled={soundboardEnabled}
             games={games}
             unassignedGames={unassignedGames}
             canStartEvent={canStartEvent}
@@ -526,6 +609,7 @@ export function HomePage() {
               confettiTriggeredRef.current = false;
             }}
             onAssignPendingPoints={assignPendingPoints}
+            onSetSoundboardEnabled={setSoundboardEnabled}
           />
         ) : null}
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Game, ScoreboardState, SyncStatus, Winner } from "../types/game";
 import { createId } from "../utils/id";
+import type { SoundboardSoundId } from "../utils/audio";
 import { assignPointsToPendingGames } from "../utils/points";
 import { calculateStats, calculateTotals, getLeader, getNextOpenGame } from "../utils/scoring";
 import { normalizeState } from "../utils/state";
@@ -291,6 +292,7 @@ export function useScoreboard() {
             type?: string;
             state?: ScoreboardState;
             playAt?: number;
+            soundId?: SoundboardSoundId;
           };
 
           if (payload.type === "state" && payload.state && Array.isArray(payload.state.games)) {
@@ -308,6 +310,26 @@ export function useScoreboard() {
               new CustomEvent("bachelor-board:victory-audio", {
                 detail: {
                   delayMs
+                }
+              })
+            );
+          }
+
+          if (
+            payload.type === "soundboard_audio" &&
+            typeof payload.playAt === "number" &&
+            typeof payload.soundId === "string"
+          ) {
+            const delayMs = Math.max(
+              0,
+              payload.playAt - (Date.now() + serverClockOffsetRef.current)
+            );
+
+            window.dispatchEvent(
+              new CustomEvent("bachelor-board:soundboard-audio", {
+                detail: {
+                  delayMs,
+                  soundId: payload.soundId
                 }
               })
             );
@@ -411,6 +433,11 @@ export function useScoreboard() {
     }));
   };
 
+  const updateState = (updater: (current: ScoreboardState) => ScoreboardState) => {
+    changeOriginRef.current = "local";
+    setState((current) => updater(current));
+  };
+
   const addGame = (input: GameInput) => {
     updateGames((games) => [
       ...games,
@@ -501,14 +528,15 @@ export function useScoreboard() {
     changeOriginRef.current = "local";
     setState({
       phase: nextState.phase,
+      soundboardEnabled: nextState.soundboardEnabled,
       games: nextState.games
     });
   };
 
   const resetAll = () => {
-    changeOriginRef.current = "local";
-    setState((current) => ({
+    updateState((current) => ({
       phase: "setup",
+      soundboardEnabled: true,
       games: current.games.map((game) => ({
         ...game,
         points: null,
@@ -518,9 +546,9 @@ export function useScoreboard() {
   };
 
   const startEvent = () => {
-    changeOriginRef.current = "local";
-    setState((current) => ({
+    updateState((current) => ({
       phase: "live",
+      soundboardEnabled: current.soundboardEnabled,
       games: assignPointsToPendingGames(
         current.games.map((game) => ({
           ...game,
@@ -531,15 +559,48 @@ export function useScoreboard() {
   };
 
   const assignPendingPoints = () => {
-    changeOriginRef.current = "local";
-    setState((current) => ({
+    updateState((current) => ({
       ...current,
       games: assignPointsToPendingGames(current.games)
     }));
   };
 
+  const setSoundboardEnabled = (enabled: boolean) => {
+    updateState((current) => ({
+      ...current,
+      soundboardEnabled: enabled
+    }));
+  };
+
+  const triggerSoundboard = useCallback(
+    async (soundId: SoundboardSoundId) => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/soundboard`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ soundId })
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(payload.error ?? "Soundboard konnte nicht ausgelost werden.");
+        }
+
+        setSyncError(null);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Soundboard konnte nicht ausgelost werden.";
+        setSyncError(message);
+      }
+    },
+    [apiBaseUrl]
+  );
+
   return {
     phase: state.phase,
+    soundboardEnabled: state.soundboardEnabled,
     games: state.games,
     totals,
     stats,
@@ -567,6 +628,8 @@ export function useScoreboard() {
     importState,
     resetAll,
     startEvent,
-    assignPendingPoints
+    assignPendingPoints,
+    setSoundboardEnabled,
+    triggerSoundboard
   };
 }
