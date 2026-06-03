@@ -62,6 +62,7 @@ export function HomePage() {
   });
   const [soundError, setSoundError] = useState<string | null>(null);
   const confettiTriggeredRef = useRef(false);
+  const victoryAudioTimerRef = useRef<number | null>(null);
 
   const winnerLabel = useMemo(() => {
     if (totals.bachelor === totals.guest) {
@@ -138,10 +139,37 @@ export function HomePage() {
       spread: 100,
       origin: { y: 0.55 }
     });
-    if (soundPreference === "enabled") {
-      void playVictoryCue();
-    }
-  }, [eventFinished, soundPreference]);
+  }, [eventFinished]);
+
+  useEffect(() => {
+    const handleVictoryAudio = (event: Event) => {
+      if (soundPreference !== "enabled") {
+        return;
+      }
+
+      const customEvent = event as CustomEvent<{ delayMs?: number }>;
+      const delayMs = Math.max(0, customEvent.detail?.delayMs ?? 0);
+
+      if (victoryAudioTimerRef.current !== null) {
+        window.clearTimeout(victoryAudioTimerRef.current);
+      }
+
+      victoryAudioTimerRef.current = window.setTimeout(() => {
+        void playVictoryCue();
+        victoryAudioTimerRef.current = null;
+      }, delayMs);
+    };
+
+    window.addEventListener("bachelor-board:victory-audio", handleVictoryAudio);
+
+    return () => {
+      window.removeEventListener("bachelor-board:victory-audio", handleVictoryAudio);
+      if (victoryAudioTimerRef.current !== null) {
+        window.clearTimeout(victoryAudioTimerRef.current);
+        victoryAudioTimerRef.current = null;
+      }
+    };
+  }, [soundPreference]);
 
   const handleImport = async (file: File) => {
     const text = await file.text();

@@ -243,10 +243,27 @@ export function useScoreboard() {
         }
 
         try {
-          const payload = JSON.parse(event.data) as { type?: string; state?: ScoreboardState };
+          const payload = JSON.parse(event.data) as {
+            type?: string;
+            state?: ScoreboardState;
+            playAt?: number;
+          };
+
           if (payload.type === "state" && payload.state && Array.isArray(payload.state.games)) {
             changeOriginRef.current = "remote";
             setState(normalizeState(payload.state));
+          }
+
+          if (payload.type === "victory_audio" && typeof payload.playAt === "number") {
+            const delayMs = Math.max(0, payload.playAt - Date.now());
+
+            window.dispatchEvent(
+              new CustomEvent("bachelor-board:victory-audio", {
+                detail: {
+                  delayMs
+                }
+              })
+            );
           }
         } catch {
           setSyncError("Echtzeitdaten konnten nicht verarbeitet werden.");
