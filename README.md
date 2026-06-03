@@ -2,6 +2,8 @@
 
 Responsive Live-Scoreboard-Webapp fuer einen Junggesellenabschied im Stil einer TV-Gameshow. Die App nutzt ein kleines Realtime-Backend, damit Regie und Gaeste denselben Live-Spielstand sehen.
 
+Hinweis: Dieses Projekt wurde mit KI-Unterstuetzung erstellt und weiterentwickelt.
+
 ## Docker Produktion
 
 ```bash
