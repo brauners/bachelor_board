@@ -21,9 +21,24 @@ function isRecord(value) {
   return typeof value === "object" && value !== null;
 }
 
+function inferPhase(games) {
+  return games.some((game) => game.points !== null || game.winner !== null) ? "live" : "setup";
+}
+
+function normalizeState(state) {
+  return {
+    phase: state.phase === "live" || state.phase === "setup" ? state.phase : inferPhase(state.games),
+    games: state.games
+  };
+}
+
 function validateState(state) {
   if (!isRecord(state) || !Array.isArray(state.games)) {
     throw new Error("Invalid state payload");
+  }
+
+  if (state.phase !== "setup" && state.phase !== "live") {
+    throw new Error("Invalid phase");
   }
 
   if (state.games.length > 200) {
@@ -49,7 +64,7 @@ function validateState(state) {
       throw new Error(`Invalid game name at position ${index + 1}`);
     }
 
-    if (!Number.isInteger(points) || points < 1 || points > 100) {
+    if (points !== null && (!Number.isInteger(points) || points < 1 || points > 100)) {
       throw new Error(`Invalid points at position ${index + 1}`);
     }
 
@@ -77,12 +92,12 @@ async function persistState(state) {
 
 async function loadInitialState() {
   try {
-    const persistedState = await loadJson(STATE_FILE);
+    const persistedState = normalizeState(await loadJson(STATE_FILE));
     validateState(persistedState);
     currentState = persistedState;
     return;
   } catch {
-    const defaultState = await loadJson(DEFAULT_STATE_FILE);
+    const defaultState = normalizeState(await loadJson(DEFAULT_STATE_FILE));
     validateState(defaultState);
     currentState = defaultState;
     await persistState(currentState);
@@ -202,8 +217,9 @@ app.post("/api/auth/logout", (request, response) => {
 
 app.put("/api/state", requireAdmin, async (request, response) => {
   try {
-    validateState(request.body);
-    currentState = request.body;
+    const nextState = normalizeState(request.body);
+    validateState(nextState);
+    currentState = nextState;
     await persistState(currentState);
     broadcastState();
     response.json(currentState);

@@ -1,15 +1,14 @@
-import type { ScoreStats, ScoreTotals } from "../types/game";
+import type { ScoreStats } from "../types/game";
 
 type StatsGridProps = {
   stats: ScoreStats;
-  totals: ScoreTotals;
 };
 
-export function StatsGrid({ stats, totals }: StatsGridProps) {
+export function StatsGrid({ stats }: StatsGridProps) {
   const items = [
     { label: "Siege Marius", value: stats.bachelorWins },
     { label: "Siege Gaeste", value: stats.guestWins },
-    { label: "Gesamtpunkte", value: totals.bachelor + totals.guest },
+    { label: "Offene Punkte", value: stats.openPoints },
     { label: "Quote Marius", value: `${stats.winRateBachelor.toFixed(0)}%` },
     { label: "Quote Gaeste", value: `${stats.winRateGuest.toFixed(0)}%` },
     { label: "Offene Spiele", value: stats.openGames }

@@ -30,7 +30,9 @@ export function GameList({ games }: GameListProps) {
                   : "border-white/10 bg-stage-900/80"
             ].join(" ")}
           >
-            <div className="font-display text-3xl text-accent-gold">{game.points}</div>
+            <div className="font-display text-3xl text-accent-gold">
+              {game.points === null ? "?" : game.points}
+            </div>
             <div>
               <div className="font-semibold text-white">{game.guestName} vs Marius</div>
               <div className="text-white/60">{game.gameName}</div>

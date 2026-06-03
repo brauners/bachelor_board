@@ -3,6 +3,10 @@ import type { Game, ScoreStats, ScoreTotals } from "../types/game";
 export function calculateTotals(games: Game[]): ScoreTotals {
   return games.reduce<ScoreTotals>(
     (totals, game) => {
+      if (game.points === null) {
+        return totals;
+      }
+
       if (game.winner === "bachelor") {
         totals.bachelor += game.points;
       }
@@ -21,14 +25,19 @@ export function calculateStats(games: Game[]): ScoreStats {
   const bachelorWins = games.filter((game) => game.winner === "bachelor").length;
   const guestWins = games.filter((game) => game.winner === "guest").length;
   const openGames = games.filter((game) => game.winner === null).length;
+  const openPoints = games.reduce(
+    (sum, game) => sum + (game.winner === null ? (game.points ?? 0) : 0),
+    0
+  );
   const totalGames = games.length;
-  const totalPoints = games.reduce((sum, game) => sum + game.points, 0);
+  const totalPoints = games.reduce((sum, game) => sum + (game.points ?? 0), 0);
   const finishedGames = bachelorWins + guestWins;
 
   return {
     bachelorWins,
     guestWins,
     openGames,
+    openPoints,
     totalGames,
     totalPoints,
     winRateBachelor: finishedGames ? (bachelorWins / finishedGames) * 100 : 0,

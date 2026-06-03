@@ -9,35 +9,49 @@ type GameDraft = {
 };
 
 type AdminPanelProps = {
+  phase: "setup" | "live";
   games: Game[];
-  onAddGame: (draft: { guestName: string; gameName: string; points: number }) => void;
-  onUpdateGame: (id: string, draft: { guestName: string; gameName: string; points: number }) => void;
+  unassignedGames: number;
+  canStartEvent: boolean;
+  canAssignPendingPoints: boolean;
+  onAddGame: (draft: { guestName: string; gameName: string; points: number | null }) => void;
+  onUpdateGame: (id: string, draft: { guestName: string; gameName: string; points: number | null }) => void;
   onDeleteGame: (id: string) => void;
   onMoveGame: (id: string, direction: "up" | "down") => void;
+  onShuffleGames: () => void;
   onSetWinner: (id: string, winner: "bachelor" | "guest") => void;
   onResetResult: (id: string) => void;
   onExport: () => void;
   onImport: (file: File) => void;
   onResetAll: () => void;
+  onStartEvent: () => void;
+  onAssignPendingPoints: () => void;
 };
 
 const emptyDraft: GameDraft = {
   guestName: "",
   gameName: "",
-  points: "1"
+  points: ""
 };
 
 export function AdminPanel({
+  phase,
   games,
+  unassignedGames,
+  canStartEvent,
+  canAssignPendingPoints,
   onAddGame,
   onUpdateGame,
   onDeleteGame,
   onMoveGame,
+  onShuffleGames,
   onSetWinner,
   onResetResult,
   onExport,
   onImport,
-  onResetAll
+  onResetAll,
+  onStartEvent,
+  onAssignPendingPoints
 }: AdminPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState<GameDraft>(emptyDraft);
@@ -50,7 +64,7 @@ export function AdminPanel({
     const payload = {
       guestName: draft.guestName.trim(),
       gameName: draft.gameName.trim(),
-      points: Number(draft.points)
+      points: draft.points.trim() === "" ? null : Number(draft.points)
     };
 
     if (!payload.guestName || !payload.gameName) {
@@ -58,8 +72,8 @@ export function AdminPanel({
       return;
     }
 
-    if (!Number.isInteger(payload.points) || payload.points < 1) {
-      setErrorMessage("Bitte einen gueltigen Punktewert ab 1 eingeben.");
+    if (payload.points !== null && (!Number.isInteger(payload.points) || payload.points < 1)) {
+      setErrorMessage("Punkte muessen leer bleiben oder als ganze Zahl ab 1 gesetzt werden.");
       return;
     }
 
@@ -79,7 +93,7 @@ export function AdminPanel({
     setDraft({
       guestName: game.guestName,
       gameName: game.gameName,
-      points: String(game.points)
+      points: game.points === null ? "" : String(game.points)
     });
     setErrorMessage(null);
   };
@@ -93,9 +107,33 @@ export function AdminPanel({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="font-display text-3xl uppercase text-white">Regie</h2>
-          <p className="text-white/60">Spiele pflegen, Punkte vergeben und Event steuern.</p>
+          <p className="text-white/60">Spiele pflegen, Reihenfolge steuern und Punkte auslosen.</p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={onStartEvent}
+            disabled={!canStartEvent}
+            className="rounded-full bg-accent-cyan px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-stage-950 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Event starten
+          </button>
+          <button
+            type="button"
+            onClick={onAssignPendingPoints}
+            disabled={!canAssignPendingPoints}
+            className="rounded-full border border-accent-gold/50 bg-accent-gold/10 px-4 py-2 text-sm uppercase tracking-[0.2em] text-accent-gold disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Neue Spiele bepunkten
+          </button>
+          <button
+            type="button"
+            onClick={onShuffleGames}
+            disabled={games.length < 2}
+            className="rounded-full border border-white/15 px-4 py-2 text-sm uppercase tracking-[0.2em] text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Reihenfolge mischen
+          </button>
           <button
             type="button"
             onClick={onExport}
@@ -161,16 +199,16 @@ export function AdminPanel({
             className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none ring-0 transition focus:border-accent-cyan"
           />
           <input
-            value={draft.points}
             type="number"
             min="1"
             step="1"
             inputMode="numeric"
+            value={draft.points}
             onChange={(event) => {
               setDraft((current) => ({ ...current, points: event.target.value }));
               setErrorMessage(null);
             }}
-            placeholder="Punkte"
+            placeholder="Punkte optional"
             className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none ring-0 transition focus:border-accent-cyan"
           />
           <button
@@ -180,10 +218,29 @@ export function AdminPanel({
             {editingId ? "Spiel speichern" : "Spiel hinzufuegen"}
           </button>
         </div>
+        <p className="mt-3 text-sm text-white/50">
+          {phase === "setup"
+            ? "Punkte werden standardmaessig beim Event-Start zufaellig verteilt. Du kannst sie hier aber auch manuell setzen."
+            : "Neue Spiele bleiben zunaechst ohne Punkte, bis du sie explizit bepunkten laesst. Manuelle Punkte sind jederzeit moeglich."}
+        </p>
         {errorMessage ? (
           <p className="mt-3 text-sm text-accent-coral">{errorMessage}</p>
         ) : null}
       </form>
+
+      <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-stage-900/60 p-4 text-sm text-white/70">
+        <div className="text-xs uppercase tracking-[0.3em] text-white/45">Event-Modus</div>
+        <div className="mt-2 font-display text-2xl uppercase text-white">
+          {phase === "setup" ? "Setup" : "Live"}
+        </div>
+        <div className="mt-2">
+          {phase === "setup"
+            ? "Reihenfolge und Spiele koennen frei bearbeitet werden. Beim Start werden alle Punkte einmalig ausgelost."
+            : unassignedGames > 0
+              ? `${unassignedGames} neue Spiele warten noch auf eine Punktezuweisung.`
+              : "Alle sichtbaren Punkte sind fix und bleiben auch bei Umordnungen erhalten."}
+        </div>
+      </div>
 
       <div className="mt-6 grid gap-3">
         {games.map((game, index) => (
@@ -197,12 +254,14 @@ export function AdminPanel({
                 {game.guestName} vs Marius
               </div>
               <div className="mt-1 text-white/65">
-                {game.gameName} · {game.points} Punkte
+                {game.gameName} ·{" "}
+                {game.points === null ? "Punkte noch offen" : `${game.points} Punkte`}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => onSetWinner(game.id, "bachelor")}
+                  disabled={game.points === null}
                   className="rounded-full bg-accent-cyan px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-stage-950"
                 >
                   Marius gewinnt
@@ -210,6 +269,7 @@ export function AdminPanel({
                 <button
                   type="button"
                   onClick={() => onSetWinner(game.id, "guest")}
+                  disabled={game.points === null}
                   className="rounded-full bg-accent-coral px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white"
                 >
                   Gast gewinnt

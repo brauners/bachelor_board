@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Game, ScoreboardState, SyncStatus, Winner } from "../types/game";
 import { createId } from "../utils/id";
+import { assignPointsToPendingGames } from "../utils/points";
 import { calculateStats, calculateTotals, getLeader, getNextOpenGame } from "../utils/scoring";
-import { sampleGames } from "../utils/sampleGames";
+import { normalizeState } from "../utils/state";
 import { loadState, saveState } from "../utils/storage";
 
 type GameInput = Pick<Game, "guestName" | "gameName" | "points">;
@@ -54,6 +55,12 @@ export function useScoreboard() {
   const leader = useMemo(() => getLeader(totals), [totals]);
   const eventFinished = stats.totalGames > 0 && stats.openGames === 0;
   const isAdminAuthenticated = adminToken.trim().length > 0;
+  const unassignedGames = useMemo(
+    () => state.games.filter((game) => game.points === null).length,
+    [state.games]
+  );
+  const canStartEvent = state.phase === "setup" && state.games.length > 0;
+  const canAssignPendingPoints = state.phase === "live" && unassignedGames > 0;
 
   useEffect(() => {
     stateRef.current = state;
@@ -107,7 +114,7 @@ export function useScoreboard() {
       throw new Error("Serverzustand konnte nicht geladen werden.");
     }
 
-    const nextState = (await response.json()) as ScoreboardState;
+    const nextState = normalizeState((await response.json()) as ScoreboardState);
 
     if (!Array.isArray(nextState.games)) {
       throw new Error("Serverzustand ist ungueltig.");
@@ -239,7 +246,7 @@ export function useScoreboard() {
           const payload = JSON.parse(event.data) as { type?: string; state?: ScoreboardState };
           if (payload.type === "state" && payload.state && Array.isArray(payload.state.games)) {
             changeOriginRef.current = "remote";
-            setState(payload.state);
+            setState(normalizeState(payload.state));
           }
         } catch {
           setSyncError("Echtzeitdaten konnten nicht verarbeitet werden.");
@@ -335,6 +342,7 @@ export function useScoreboard() {
   const updateGames = (updater: (games: Game[]) => Game[]) => {
     changeOriginRef.current = "local";
     setState((current) => ({
+      ...current,
       games: updater(current.games)
     }));
   };
@@ -396,9 +404,26 @@ export function useScoreboard() {
     });
   };
 
+  const shuffleGames = () => {
+    updateGames((games) => {
+      const nextGames = [...games];
+
+      for (let index = nextGames.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        const current = nextGames[index];
+        nextGames[index] = nextGames[swapIndex] as Game;
+        nextGames[swapIndex] = current as Game;
+      }
+
+      return nextGames;
+    });
+  };
+
   const setWinner = (id: string, winner: Exclude<Winner, null>) => {
     updateGames((games) =>
-      games.map((game) => (game.id === id ? { ...game, winner } : game))
+      games.map((game) =>
+        game.id === id && game.points !== null ? { ...game, winner } : game
+      )
     );
   };
 
@@ -410,15 +435,47 @@ export function useScoreboard() {
 
   const importState = (nextState: ScoreboardState) => {
     changeOriginRef.current = "local";
-    setState(nextState);
+    setState({
+      phase: nextState.phase,
+      games: nextState.games
+    });
   };
 
   const resetAll = () => {
     changeOriginRef.current = "local";
-    setState({ games: sampleGames });
+    setState((current) => ({
+      phase: "setup",
+      games: current.games.map((game) => ({
+        ...game,
+        points: null,
+        winner: null
+      }))
+    }));
+  };
+
+  const startEvent = () => {
+    changeOriginRef.current = "local";
+    setState((current) => ({
+      phase: "live",
+      games: assignPointsToPendingGames(
+        current.games.map((game) => ({
+          ...game,
+          winner: null
+        }))
+      )
+    }));
+  };
+
+  const assignPendingPoints = () => {
+    changeOriginRef.current = "local";
+    setState((current) => ({
+      ...current,
+      games: assignPointsToPendingGames(current.games)
+    }));
   };
 
   return {
+    phase: state.phase,
     games: state.games,
     totals,
     stats,
@@ -430,15 +487,21 @@ export function useScoreboard() {
     isAdminAuthenticated,
     authError,
     authPending,
+    unassignedGames,
+    canStartEvent,
+    canAssignPendingPoints,
     login,
     logout,
     addGame,
     updateGame,
     deleteGame,
     moveGame,
+    shuffleGames,
     setWinner,
     resetResult,
     importState,
-    resetAll
+    resetAll,
+    startEvent,
+    assignPendingPoints
   };
 }
