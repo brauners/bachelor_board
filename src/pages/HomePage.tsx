@@ -10,7 +10,10 @@ import { StatsGrid } from "../components/StatsGrid";
 import { useFullscreen } from "../hooks/useFullscreen";
 import { useScoreboard } from "../store/useScoreboard";
 import type { ScoreboardState } from "../types/game";
+import { enableAudioPlayback, isAudioPlaybackEnabled, playVictoryCue } from "../utils/audio";
 import { downloadState, parseImportedState } from "../utils/importExport";
+
+const SOUND_SESSION_KEY = "bachelor-board-sound-session";
 
 export function HomePage() {
   const {
@@ -49,6 +52,15 @@ export function HomePage() {
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [loginPin, setLoginPin] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [soundPreference, setSoundPreference] = useState<"pending" | "enabled" | "muted">(() => {
+    if (typeof window === "undefined") {
+      return "pending";
+    }
+
+    const stored = window.sessionStorage.getItem(SOUND_SESSION_KEY);
+    return stored === "enabled" || stored === "muted" ? stored : "pending";
+  });
+  const [soundError, setSoundError] = useState<string | null>(null);
   const confettiTriggeredRef = useRef(false);
 
   const winnerLabel = useMemo(() => {
@@ -80,6 +92,37 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.sessionStorage.setItem(SOUND_SESSION_KEY, soundPreference);
+  }, [soundPreference]);
+
+  useEffect(() => {
+    if (soundPreference !== "enabled") {
+      return;
+    }
+
+    const reenableSound = () => {
+      void enableAudioPlayback();
+      window.removeEventListener("pointerdown", reenableSound);
+      window.removeEventListener("touchend", reenableSound);
+      window.removeEventListener("keydown", reenableSound);
+    };
+
+    window.addEventListener("pointerdown", reenableSound, { passive: true });
+    window.addEventListener("touchend", reenableSound, { passive: true });
+    window.addEventListener("keydown", reenableSound);
+
+    return () => {
+      window.removeEventListener("pointerdown", reenableSound);
+      window.removeEventListener("touchend", reenableSound);
+      window.removeEventListener("keydown", reenableSound);
+    };
+  }, [soundPreference]);
+
+  useEffect(() => {
     if (!eventFinished) {
       confettiTriggeredRef.current = false;
       return;
@@ -95,7 +138,10 @@ export function HomePage() {
       spread: 100,
       origin: { y: 0.55 }
     });
-  }, [eventFinished]);
+    if (soundPreference === "enabled") {
+      void playVictoryCue();
+    }
+  }, [eventFinished, soundPreference]);
 
   const handleImport = async (file: File) => {
     const text = await file.text();
@@ -148,6 +194,18 @@ export function HomePage() {
       setLoginPin("");
       setShowLogin(false);
     }
+  };
+
+  const handleEnableSound = async () => {
+    const success = await enableAudioPlayback();
+
+    if (success || isAudioPlaybackEnabled()) {
+      setSoundPreference("enabled");
+      setSoundError(null);
+      return;
+    }
+
+    setSoundError("Ton konnte auf diesem Geraet noch nicht freigeschaltet werden.");
   };
 
   const syncLabel =
@@ -219,6 +277,51 @@ export function HomePage() {
             )}
           </div>
         </header>
+
+        {soundPreference === "pending" ? (
+          <motion.section
+            layout
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[2rem] border border-accent-gold/25 bg-accent-gold/10 p-5 shadow-neon backdrop-blur"
+          >
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-sm uppercase tracking-[0.4em] text-accent-gold">
+                  Sound
+                </div>
+                <div className="mt-2 text-lg text-white">
+                  Ton fuer diese Sitzung jetzt aktivieren, damit spaetere Sounds auf dem Geraet
+                  abgespielt werden duerfen.
+                </div>
+                {soundError ? (
+                  <div className="mt-3 text-sm text-accent-coral">{soundError}</div>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleEnableSound();
+                  }}
+                  className="rounded-full bg-accent-gold px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-stage-950"
+                >
+                  Ton aktivieren
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSoundPreference("muted");
+                    setSoundError(null);
+                  }}
+                  className="rounded-full border border-white/15 px-4 py-2 text-sm uppercase tracking-[0.2em] text-white/80"
+                >
+                  Ohne Ton fortfahren
+                </button>
+              </div>
+            </div>
+          </motion.section>
+        ) : null}
 
         {showSharePanel || showLogin || isAdminAuthenticated ? (
           <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
