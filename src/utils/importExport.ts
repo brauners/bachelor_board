@@ -1,7 +1,9 @@
 import type { ScoreboardState } from "../types/game";
+import { normalizeState } from "./state";
 
 const MAX_GAMES = 200;
 const allowedWinners = new Set(["bachelor", "guest"]);
+const allowedPhases = new Set(["setup", "live"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -27,11 +29,12 @@ function validateGame(value: unknown, index: number) {
   }
 
   if (
-    typeof points !== "number" ||
-    !Number.isInteger(points) ||
-    !Number.isFinite(points) ||
-    points < 1 ||
-    points > 100
+    points !== null &&
+    (typeof points !== "number" ||
+      !Number.isInteger(points) ||
+      !Number.isFinite(points) ||
+      points < 1 ||
+      points > 100)
   ) {
     throw new Error(`Spiel ${index + 1} hat einen ungueltigen Punktewert`);
   }
@@ -60,13 +63,18 @@ export function parseImportedState(content: string): ScoreboardState {
     throw new Error("Ungueltige JSON-Datei");
   }
 
+  if (parsed.phase !== undefined && (typeof parsed.phase !== "string" || !allowedPhases.has(parsed.phase))) {
+    throw new Error("Ungueltige Event-Phase");
+  }
+
   if (parsed.games.length > MAX_GAMES) {
     throw new Error(`Zu viele Spiele in der Importdatei. Maximal ${MAX_GAMES} erlaubt.`);
   }
 
   parsed.games.forEach((game, index) => validateGame(game, index));
 
-  return {
+  return normalizeState({
+    phase: parsed.phase,
     games: parsed.games
-  };
+  });
 }

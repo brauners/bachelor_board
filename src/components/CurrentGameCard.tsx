@@ -22,9 +22,23 @@ export function CurrentGameCard({ game }: CurrentGameCardProps) {
           <div className="text-2xl uppercase tracking-[0.4em] text-white/50">gegen</div>
           <div className="font-display text-5xl uppercase text-accent-cyan sm:text-6xl">Marius</div>
           <div className="pt-4 text-3xl font-semibold text-white">{game.gameName}</div>
-          <div className="text-lg uppercase tracking-[0.3em] text-white/65">
-            {game.points} Punkte
-          </div>
+          {game.points !== null ? (
+            <div className="rounded-2xl border border-accent-gold/40 bg-accent-gold/10 px-5 py-4">
+              <div className="text-sm uppercase tracking-[0.35em] text-accent-gold/80">
+                Dieses Spiel ist
+              </div>
+              <div className="mt-2 font-display text-5xl uppercase text-accent-gold sm:text-6xl">
+                {game.points} Punkte
+              </div>
+              <div className="mt-1 text-sm uppercase tracking-[0.25em] text-white/60">
+                wert
+              </div>
+            </div>
+          ) : (
+            <div className="text-lg uppercase tracking-[0.3em] text-white/65">
+              Punkte werden vor Showstart ausgelost
+            </div>
+          )}
         </div>
       ) : (
         <div className="mt-6 space-y-3">

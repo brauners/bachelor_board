@@ -1,9 +1,11 @@
 import type { ScoreboardState } from "../types/game";
 import { sampleGames } from "./sampleGames";
+import { normalizeState } from "./state";
 
 export const STORAGE_KEY = "bachelor-board-state";
 
 const fallbackState: ScoreboardState = {
+  phase: "setup",
   games: sampleGames
 };
 
@@ -24,7 +26,7 @@ export function loadState(): ScoreboardState {
       return fallbackState;
     }
 
-    return parsed;
+    return normalizeState(parsed);
   } catch {
     return fallbackState;
   }

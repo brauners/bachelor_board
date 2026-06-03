@@ -1,14 +1,16 @@
 export type Winner = "bachelor" | "guest" | null;
+export type EventPhase = "setup" | "live";
 
 export type Game = {
   id: string;
   guestName: string;
   gameName: string;
-  points: number;
+  points: number | null;
   winner: Winner;
 };
 
 export type ScoreboardState = {
+  phase: EventPhase;
   games: Game[];
 };
 
@@ -21,6 +23,7 @@ export type ScoreStats = {
   bachelorWins: number;
   guestWins: number;
   openGames: number;
+  openPoints: number;
   totalGames: number;
   totalPoints: number;
   winRateBachelor: number;

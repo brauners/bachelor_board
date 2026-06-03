@@ -14,6 +14,7 @@ import { downloadState, parseImportedState } from "../utils/importExport";
 
 export function HomePage() {
   const {
+    phase,
     games,
     totals,
     stats,
@@ -25,16 +26,22 @@ export function HomePage() {
     isAdminAuthenticated,
     authError,
     authPending,
+    unassignedGames,
+    canStartEvent,
+    canAssignPendingPoints,
     login,
     logout,
     addGame,
     updateGame,
     deleteGame,
     moveGame,
+    shuffleGames,
     setWinner,
     resetResult,
     importState,
-    resetAll
+    resetAll,
+    startEvent,
+    assignPendingPoints
   } = useScoreboard();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const [showAdmin, setShowAdmin] = useState(true);
@@ -110,14 +117,18 @@ export function HomePage() {
   };
 
   const handleResetAll = () => {
-    if (window.confirm("Gesamte Veranstaltung wirklich zuruecksetzen?")) {
+    if (
+      window.confirm(
+        "Gesamte Veranstaltung wirklich zuruecksetzen? Reihenfolge bleibt erhalten, Punkte und Ergebnisse werden neu vorbereitet."
+      )
+    ) {
       resetAll();
       confettiTriggeredRef.current = false;
     }
   };
 
   const handleExport = () => {
-    const state: ScoreboardState = { games };
+    const state: ScoreboardState = { phase, games };
     downloadState(state);
   };
 
@@ -253,10 +264,21 @@ export function HomePage() {
               className="rounded-[2rem] border border-white/10 bg-white/6 p-6 shadow-neon backdrop-blur"
             >
               <div className="text-sm uppercase tracking-[0.4em] text-white/50">Status</div>
-              <div className="mt-3 font-display text-4xl uppercase text-white">{syncLabel}</div>
-              <div className="mt-3 text-white/65">
-                {syncError ?? "Regie und Gaeste sehen denselben Live-Spielstand."}
-              </div>
+            <div className="mt-3 font-display text-4xl uppercase text-white">{syncLabel}</div>
+            <div className="mt-3 text-white/65">
+              {syncError ?? "Regie und Gaeste sehen denselben Live-Spielstand."}
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-stage-900/70 px-4 py-3 text-sm text-white/70">
+              <span className="font-semibold text-white">
+                {phase === "setup" ? "Setup-Modus" : "Live-Modus"}
+              </span>
+              {" · "}
+              {phase === "setup"
+                ? "Punkte werden erst beim Event-Start sichtbar."
+                : unassignedGames > 0
+                  ? `${unassignedGames} neue Spiele haben noch keine Punkte.`
+                  : "Alle Punktwerte sind fest zugewiesen."}
+            </div>
 
               {!isAdminAuthenticated && showLogin ? (
                 <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-stage-900/80 p-4">
@@ -328,7 +350,7 @@ export function HomePage() {
                 : `${stats.openGames} Spiele sind noch offen.`}
             </div>
             <div className="mt-8">
-              <StatsGrid stats={stats} totals={totals} />
+              <StatsGrid stats={stats} />
             </div>
           </motion.div>
         </section>
@@ -337,16 +359,26 @@ export function HomePage() {
 
         {isAdminAuthenticated && showAdmin ? (
           <AdminPanel
+            phase={phase}
             games={games}
+            unassignedGames={unassignedGames}
+            canStartEvent={canStartEvent}
+            canAssignPendingPoints={canAssignPendingPoints}
             onAddGame={addGame}
             onUpdateGame={updateGame}
             onDeleteGame={handleDeleteGame}
             onMoveGame={moveGame}
+            onShuffleGames={shuffleGames}
             onSetWinner={setWinner}
             onResetResult={resetResult}
             onExport={handleExport}
             onImport={handleImport}
             onResetAll={handleResetAll}
+            onStartEvent={() => {
+              startEvent();
+              confettiTriggeredRef.current = false;
+            }}
+            onAssignPendingPoints={assignPendingPoints}
           />
         ) : null}
       </div>
