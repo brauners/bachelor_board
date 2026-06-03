@@ -15,6 +15,19 @@ function shuffle<T>(items: T[]): T[] {
   return next;
 }
 
+function consumeRemainingPool(totalPool: number[], assignedPoints: number[]): number[] {
+  const remainingPool = [...totalPool];
+
+  for (const points of assignedPoints) {
+    const matchIndex = remainingPool.indexOf(points);
+    if (matchIndex >= 0) {
+      remainingPool.splice(matchIndex, 1);
+    }
+  }
+
+  return remainingPool;
+}
+
 export function generatePointsPool(gameCount: number): number[] {
   if (gameCount <= 0) {
     return [];
@@ -63,7 +76,14 @@ export function assignPointsToPendingGames(games: Game[]): Game[] {
     return games;
   }
 
-  const pendingPoints = shuffle(generatePointsPool(pendingGames.length));
+  const assignedPoints = games.flatMap((game) => (game.points === null ? [] : [game.points]));
+  const totalPool = generatePointsPool(games.length);
+  const remainingPool = consumeRemainingPool(totalPool, assignedPoints);
+  const fallbackPool = generatePointsPool(pendingGames.length);
+  const pendingPoints = shuffle([
+    ...remainingPool,
+    ...fallbackPool.slice(Math.max(0, pendingGames.length - remainingPool.length))
+  ]);
   let pendingIndex = 0;
 
   return games.map((game) => {
