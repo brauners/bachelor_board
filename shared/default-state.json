@@ -1,6 +1,13 @@
 {
   "games": [
-    { "id": "1", "guestName": "Max", "gameName": "Dosenwerfen", "points": 1, "winner": null },
-    { "id": "2", "guestName": "Tobi", "gameName": "Beer Pong", "points": 2, "winner": null }
+    { "id": "1", "guestName": "Flo", "gameName": "_", "points": 1, "winner": null },
+    { "id": "2", "guestName": "Ben", "gameName": "_", "points": 1, "winner": null },
+    { "id": "3", "guestName": "Chris Rem.", "gameName": "_", "points": 1, "winner": null },
+    { "id": "4", "guestName": "Gianni", "gameName": "_", "points": 1, "winner": null },
+    { "id": "5", "guestName": "Lena", "gameName": "_", "points": 1, "winner": null },
+    { "id": "6", "guestName": "Patrick", "gameName": "_", "points": 1, "winner": null },
+    { "id": "7", "guestName": "Chris Rei.", "gameName": "_", "points": 1, "winner": null },
+    { "id": "8", "guestName": "Flitz", "gameName": "_", "points": 1, "winner": null },
+    { "id": "9", "guestName": "Andre", "gameName": "_", "points": 1, "winner": null }
   ]
 }
