@@ -29,6 +29,7 @@ export function HomePage() {
     isAdminAuthenticated,
     authError,
     authPending,
+    syncDiagnostics,
     unassignedGames,
     canStartEvent,
     canAssignPendingPoints,
@@ -62,6 +63,7 @@ export function HomePage() {
   });
   const [soundError, setSoundError] = useState<string | null>(null);
   const confettiTriggeredRef = useRef(false);
+  const victoryAudioTimerRef = useRef<number | null>(null);
 
   const winnerLabel = useMemo(() => {
     if (totals.bachelor === totals.guest) {
@@ -138,10 +140,37 @@ export function HomePage() {
       spread: 100,
       origin: { y: 0.55 }
     });
-    if (soundPreference === "enabled") {
-      void playVictoryCue();
-    }
-  }, [eventFinished, soundPreference]);
+  }, [eventFinished]);
+
+  useEffect(() => {
+    const handleVictoryAudio = (event: Event) => {
+      if (soundPreference !== "enabled") {
+        return;
+      }
+
+      const customEvent = event as CustomEvent<{ delayMs?: number }>;
+      const delayMs = Math.max(0, customEvent.detail?.delayMs ?? 0);
+
+      if (victoryAudioTimerRef.current !== null) {
+        window.clearTimeout(victoryAudioTimerRef.current);
+      }
+
+      victoryAudioTimerRef.current = window.setTimeout(() => {
+        void playVictoryCue();
+        victoryAudioTimerRef.current = null;
+      }, delayMs);
+    };
+
+    window.addEventListener("bachelor-board:victory-audio", handleVictoryAudio);
+
+    return () => {
+      window.removeEventListener("bachelor-board:victory-audio", handleVictoryAudio);
+      if (victoryAudioTimerRef.current !== null) {
+        window.clearTimeout(victoryAudioTimerRef.current);
+        victoryAudioTimerRef.current = null;
+      }
+    };
+  }, [soundPreference]);
 
   const handleImport = async (file: File) => {
     const text = await file.text();
@@ -217,6 +246,21 @@ export function HomePage() {
 
   const topButtonClass =
     "min-w-[11rem] rounded-full border border-white/15 bg-stage-900/70 px-4 py-2 text-sm uppercase tracking-[0.25em] text-white/80 backdrop-blur-sm transition-colors hover:border-accent-cyan hover:text-accent-cyan";
+
+  const syncDiagnosticsLabel = useMemo(() => {
+    const offsetLabel =
+      syncDiagnostics.clockOffsetMs === null
+        ? "?"
+        : `${Math.round(syncDiagnostics.clockOffsetMs)} ms`;
+    const rttLabel =
+      syncDiagnostics.rttMs === null ? "?" : `${Math.round(syncDiagnostics.rttMs)} ms`;
+    const updatedLabel =
+      syncDiagnostics.updatedAt === null
+        ? "?"
+        : new Date(syncDiagnostics.updatedAt).toLocaleTimeString("de-DE");
+
+    return `RTT ${rttLabel} · Offset ${offsetLabel} · Update ${updatedLabel}`;
+  }, [syncDiagnostics]);
 
   return (
     <div className="min-h-screen bg-stage-radial text-white">
@@ -484,6 +528,10 @@ export function HomePage() {
             onAssignPendingPoints={assignPendingPoints}
           />
         ) : null}
+
+        <div className="pb-2 text-center text-xs text-white/35">
+          Sync-Diagnose: {syncDiagnosticsLabel}
+        </div>
       </div>
     </div>
   );

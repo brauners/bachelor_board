@@ -13,6 +13,7 @@ const DEFAULT_STATE_FILE =
 const ADMIN_KEY = process.env.ADMIN_KEY ?? "";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const CLIENT_DIST_DIR = process.env.CLIENT_DIST_DIR ?? path.resolve("dist");
+const VICTORY_CUE_LEAD_MS = 1500;
 
 const clients = new Set();
 const sessions = new Map();
@@ -146,8 +147,28 @@ function requireAdmin(request, response, next) {
   next();
 }
 
+function isEventFinished(state) {
+  return state.games.length > 0 && state.games.every((game) => game.winner !== null);
+}
+
 function broadcastState() {
-  const message = JSON.stringify({ type: "state", state: currentState });
+  const message = JSON.stringify({
+    type: "state",
+    state: currentState
+  });
+
+  for (const client of clients) {
+    if (client.readyState === 1) {
+      client.send(message);
+    }
+  }
+}
+
+function broadcastVictoryCue() {
+  const message = JSON.stringify({
+    type: "victory_audio",
+    playAt: Date.now() + VICTORY_CUE_LEAD_MS
+  });
 
   for (const client of clients) {
     if (client.readyState === 1) {
@@ -161,6 +182,7 @@ app.use((request, response, next) => {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.setHeader("Access-Control-Expose-Headers", "X-Server-Time");
 
   if (request.method === "OPTIONS") {
     response.status(204).end();
@@ -172,10 +194,12 @@ app.use((request, response, next) => {
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_request, response) => {
+  response.setHeader("X-Server-Time", String(Date.now()));
   response.json({ ok: true });
 });
 
 app.get("/api/state", (_request, response) => {
+  response.setHeader("X-Server-Time", String(Date.now()));
   response.json(currentState);
 });
 
@@ -202,6 +226,7 @@ app.post("/api/auth/login", (request, response) => {
 
 app.get("/api/auth/session", (request, response) => {
   const session = getSessionFromRequest(request);
+  response.setHeader("X-Server-Time", String(Date.now()));
   response.json({ authenticated: Boolean(session) });
 });
 
@@ -217,11 +242,16 @@ app.post("/api/auth/logout", (request, response) => {
 
 app.put("/api/state", requireAdmin, async (request, response) => {
   try {
+    const wasFinished = currentState ? isEventFinished(currentState) : false;
     const nextState = normalizeState(request.body);
     validateState(nextState);
     currentState = nextState;
     await persistState(currentState);
     broadcastState();
+    if (!wasFinished && isEventFinished(currentState)) {
+      broadcastVictoryCue();
+    }
+    response.setHeader("X-Server-Time", String(Date.now()));
     response.json(currentState);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save state";
