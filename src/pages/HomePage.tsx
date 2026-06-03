@@ -10,7 +10,7 @@ import { StatsGrid } from "../components/StatsGrid";
 import { useFullscreen } from "../hooks/useFullscreen";
 import { useScoreboard } from "../store/useScoreboard";
 import type { ScoreboardState } from "../types/game";
-import { playVictoryFanfare } from "../utils/audio";
+import { playVictoryFanfare, unlockAudio } from "../utils/audio";
 import { downloadState, parseImportedState } from "../utils/importExport";
 
 export function HomePage() {
@@ -81,6 +81,22 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
+    const prepareAudio = () => {
+      void unlockAudio();
+    };
+
+    window.addEventListener("pointerdown", prepareAudio, { passive: true });
+    window.addEventListener("touchend", prepareAudio, { passive: true });
+    window.addEventListener("keydown", prepareAudio);
+
+    return () => {
+      window.removeEventListener("pointerdown", prepareAudio);
+      window.removeEventListener("touchend", prepareAudio);
+      window.removeEventListener("keydown", prepareAudio);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!eventFinished) {
       confettiTriggeredRef.current = false;
       return;
@@ -96,7 +112,7 @@ export function HomePage() {
       spread: 100,
       origin: { y: 0.55 }
     });
-    playVictoryFanfare();
+    void playVictoryFanfare();
   }, [eventFinished]);
 
   const handleImport = async (file: File) => {

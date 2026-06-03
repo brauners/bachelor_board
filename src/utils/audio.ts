@@ -1,19 +1,65 @@
-export function playVictoryFanfare(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const audioWindow = window as Window &
-    typeof globalThis & {
+type AudioWindow = Window &
+  typeof globalThis & {
     webkitAudioContext?: typeof AudioContext;
   };
-  const AudioContextCtor = audioWindow.AudioContext ?? audioWindow.webkitAudioContext;
+
+let sharedAudioContext: AudioContext | null = null;
+
+function getAudioContextCtor(): typeof AudioContext | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const audioWindow = window as AudioWindow;
+  return audioWindow.AudioContext ?? audioWindow.webkitAudioContext ?? null;
+}
+
+function getSharedAudioContext(): AudioContext | null {
+  if (sharedAudioContext && sharedAudioContext.state !== "closed") {
+    return sharedAudioContext;
+  }
+
+  const AudioContextCtor = getAudioContextCtor();
 
   if (!AudioContextCtor) {
+    return null;
+  }
+
+  sharedAudioContext = new AudioContextCtor();
+  return sharedAudioContext;
+}
+
+export async function unlockAudio(): Promise<void> {
+  const context = getSharedAudioContext();
+
+  if (!context) {
     return;
   }
 
-  const context = new AudioContextCtor();
+  if (context.state === "suspended") {
+    try {
+      await context.resume();
+    } catch {
+      // Ignore browsers that still refuse resume here.
+    }
+  }
+}
+
+export async function playVictoryFanfare(): Promise<void> {
+  const context = getSharedAudioContext();
+
+  if (!context) {
+    return;
+  }
+
+  if (context.state === "suspended") {
+    try {
+      await context.resume();
+    } catch {
+      return;
+    }
+  }
+
   const notes = [
     { frequency: 392.0, duration: 0.14 },
     { frequency: 523.25, duration: 0.16 },
@@ -42,8 +88,4 @@ export function playVictoryFanfare(): void {
 
     time += note.duration * 0.88;
   }
-
-  window.setTimeout(() => {
-    void context.close().catch(() => undefined);
-  }, 1500);
 }
