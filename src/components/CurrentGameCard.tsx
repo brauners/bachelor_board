@@ -6,16 +6,24 @@ type CurrentGameCardProps = {
 };
 
 export function CurrentGameCard({ game }: CurrentGameCardProps) {
+  const isRevealed = game?.revealed ?? false;
+
   return (
     <motion.section
       layout
-      className="rounded-[2rem] border border-white/10 bg-white/8 p-8 text-center shadow-neon backdrop-blur"
+      className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/8 p-8 text-center shadow-neon backdrop-blur"
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="text-sm uppercase tracking-[0.5em] text-accent-gold">Naechstes Duell</div>
       {game ? (
-        <div className="mt-6 space-y-4">
+        <div className="relative mt-6">
+          <div
+            className={[
+              "space-y-4 transition duration-500",
+              isRevealed ? "blur-0 opacity-100" : "blur-xl opacity-65 select-none"
+            ].join(" ")}
+          >
           <div className="font-display text-5xl uppercase text-white sm:text-6xl">
             {game.guestName}
           </div>
@@ -39,6 +47,19 @@ export function CurrentGameCard({ game }: CurrentGameCardProps) {
               Punkte werden vor Showstart ausgelost
             </div>
           )}
+          </div>
+          {!isRevealed ? (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="rounded-[1.75rem] border border-accent-gold/35 bg-stage-950/82 px-6 py-5 shadow-neon backdrop-blur-md">
+                <div className="text-sm uppercase tracking-[0.45em] text-accent-gold/80">
+                  Noch nicht revealed
+                </div>
+                <div className="mt-3 font-display text-3xl uppercase text-white sm:text-4xl">
+                  Intro in der Regie starten
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="mt-6 space-y-3">

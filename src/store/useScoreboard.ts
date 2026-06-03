@@ -293,6 +293,9 @@ export function useScoreboard() {
             state?: ScoreboardState;
             playAt?: number;
             soundId?: SoundboardSoundId;
+            durationMs?: number;
+            holdMs?: number;
+            game?: Game | null;
           };
 
           if (payload.type === "state" && payload.state && Array.isArray(payload.state.games)) {
@@ -330,6 +333,29 @@ export function useScoreboard() {
                 detail: {
                   delayMs,
                   soundId: payload.soundId
+                }
+              })
+            );
+          }
+
+          if (
+            payload.type === "next_game_intro" &&
+            typeof payload.playAt === "number" &&
+            typeof payload.durationMs === "number" &&
+            payload.game
+          ) {
+            const delayMs = Math.max(
+              0,
+              payload.playAt - (Date.now() + serverClockOffsetRef.current)
+            );
+
+            window.dispatchEvent(
+              new CustomEvent("bachelor-board:next-game-intro", {
+                detail: {
+                  delayMs,
+                  durationMs: payload.durationMs,
+                  holdMs: payload.holdMs,
+                  game: payload.game
                 }
               })
             );
@@ -446,7 +472,8 @@ export function useScoreboard() {
         guestName: input.guestName,
         gameName: input.gameName,
         points: input.points,
-        winner: null
+        winner: null,
+        revealed: false
       }
     ]);
   };
@@ -529,6 +556,8 @@ export function useScoreboard() {
     setState({
       phase: nextState.phase,
       soundboardEnabled: nextState.soundboardEnabled,
+      nextGameCueDurationMs: nextState.nextGameCueDurationMs,
+      nextGameCueHoldMs: nextState.nextGameCueHoldMs,
       games: nextState.games
     });
   };
@@ -537,10 +566,13 @@ export function useScoreboard() {
     updateState((current) => ({
       phase: "setup",
       soundboardEnabled: true,
+      nextGameCueDurationMs: current.nextGameCueDurationMs,
+      nextGameCueHoldMs: current.nextGameCueHoldMs,
       games: current.games.map((game) => ({
         ...game,
         points: null,
-        winner: null
+        winner: null,
+        revealed: false
       }))
     }));
   };
@@ -549,6 +581,8 @@ export function useScoreboard() {
     updateState((current) => ({
       phase: "live",
       soundboardEnabled: current.soundboardEnabled,
+      nextGameCueDurationMs: current.nextGameCueDurationMs,
+      nextGameCueHoldMs: current.nextGameCueHoldMs,
       games: assignPointsToPendingGames(
         current.games.map((game) => ({
           ...game,
@@ -569,6 +603,20 @@ export function useScoreboard() {
     updateState((current) => ({
       ...current,
       soundboardEnabled: enabled
+    }));
+  };
+
+  const setNextGameCueDurationMs = (durationMs: number) => {
+    updateState((current) => ({
+      ...current,
+      nextGameCueDurationMs: Math.min(15000, Math.max(1500, Math.round(durationMs)))
+    }));
+  };
+
+  const setNextGameCueHoldMs = (holdMs: number) => {
+    updateState((current) => ({
+      ...current,
+      nextGameCueHoldMs: Math.min(10000, Math.max(0, Math.round(holdMs)))
     }));
   };
 
@@ -598,9 +646,35 @@ export function useScoreboard() {
     [apiBaseUrl]
   );
 
+  const triggerNextGameIntro = useCallback(async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/show/next-game-intro`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${tokenRef.current}`
+        }
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? "Naechstes-Duell-Intro konnte nicht gestartet werden.");
+      }
+
+      setSyncError(null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Naechstes-Duell-Intro konnte nicht gestartet werden.";
+      setSyncError(message);
+    }
+  }, [apiBaseUrl]);
+
   return {
     phase: state.phase,
     soundboardEnabled: state.soundboardEnabled,
+    nextGameCueDurationMs: state.nextGameCueDurationMs,
+    nextGameCueHoldMs: state.nextGameCueHoldMs,
     games: state.games,
     totals,
     stats,
@@ -630,6 +704,9 @@ export function useScoreboard() {
     startEvent,
     assignPendingPoints,
     setSoundboardEnabled,
-    triggerSoundboard
+    setNextGameCueDurationMs,
+    setNextGameCueHoldMs,
+    triggerSoundboard,
+    triggerNextGameIntro
   };
 }

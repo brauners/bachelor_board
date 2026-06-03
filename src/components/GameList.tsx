@@ -35,7 +35,9 @@ export function GameList({ games }: GameListProps) {
             </div>
             <div>
               <div className="font-semibold text-white">{game.guestName} vs Marius</div>
-              <div className="text-white/60">{game.gameName}</div>
+              <div className="text-white/60">
+                {game.revealed ? game.gameName : "*".repeat(Math.max(6, game.gameName.length))}
+              </div>
             </div>
             <div className="text-sm uppercase tracking-[0.25em] text-white/50">
               Spiel {index + 1}

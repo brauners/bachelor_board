@@ -15,6 +15,7 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const CLIENT_DIST_DIR = process.env.CLIENT_DIST_DIR ?? path.resolve("dist");
 const VICTORY_CUE_LEAD_MS = 1500;
 const SOUNDBOARD_CUE_LEAD_MS = 350;
+const NEXT_GAME_CUE_LEAD_MS = 500;
 
 const clients = new Set();
 const sessions = new Map();
@@ -31,7 +32,24 @@ function normalizeState(state) {
   return {
     phase: state.phase === "live" || state.phase === "setup" ? state.phase : inferPhase(state.games),
     soundboardEnabled: state.soundboardEnabled === false ? false : true,
-    games: state.games
+    nextGameCueDurationMs:
+      typeof state.nextGameCueDurationMs === "number" &&
+      Number.isFinite(state.nextGameCueDurationMs) &&
+      state.nextGameCueDurationMs >= 1500 &&
+      state.nextGameCueDurationMs <= 15000
+        ? Math.round(state.nextGameCueDurationMs)
+        : 4500,
+    nextGameCueHoldMs:
+      typeof state.nextGameCueHoldMs === "number" &&
+      Number.isFinite(state.nextGameCueHoldMs) &&
+      state.nextGameCueHoldMs >= 0 &&
+      state.nextGameCueHoldMs <= 10000
+        ? Math.round(state.nextGameCueHoldMs)
+        : 1500,
+    games: state.games.map((game) => ({
+      ...game,
+      revealed: game.revealed === true
+    }))
   };
 }
 
@@ -48,6 +66,22 @@ function validateState(state) {
     throw new Error("Invalid soundboardEnabled");
   }
 
+  if (
+    !Number.isInteger(state.nextGameCueDurationMs) ||
+    state.nextGameCueDurationMs < 1500 ||
+    state.nextGameCueDurationMs > 15000
+  ) {
+    throw new Error("Invalid nextGameCueDurationMs");
+  }
+
+  if (
+    !Number.isInteger(state.nextGameCueHoldMs) ||
+    state.nextGameCueHoldMs < 0 ||
+    state.nextGameCueHoldMs > 10000
+  ) {
+    throw new Error("Invalid nextGameCueHoldMs");
+  }
+
   if (state.games.length > 200) {
     throw new Error("Too many games");
   }
@@ -57,7 +91,7 @@ function validateState(state) {
       throw new Error(`Invalid game at position ${index + 1}`);
     }
 
-    const { id, guestName, gameName, points, winner } = game;
+    const { id, guestName, gameName, points, winner, revealed } = game;
 
     if (typeof id !== "string" || id.trim() === "") {
       throw new Error(`Invalid id at position ${index + 1}`);
@@ -77,6 +111,10 @@ function validateState(state) {
 
     if (winner !== null && winner !== "bachelor" && winner !== "guest") {
       throw new Error(`Invalid winner at position ${index + 1}`);
+    }
+
+    if (typeof revealed !== "boolean") {
+      throw new Error(`Invalid revealed at position ${index + 1}`);
     }
   }
 }
@@ -197,6 +235,26 @@ function broadcastSoundboardCue(soundId) {
   }
 }
 
+function getNextOpenGame(state) {
+  return state.games.find((game) => game.winner === null) ?? null;
+}
+
+function broadcastNextGameCue(game, durationMs, holdMs) {
+  const message = JSON.stringify({
+    type: "next_game_intro",
+    game,
+    durationMs,
+    holdMs,
+    playAt: Date.now() + NEXT_GAME_CUE_LEAD_MS
+  });
+
+  for (const client of clients) {
+    if (client.readyState === 1) {
+      client.send(message);
+    }
+  }
+}
+
 const app = express();
 app.use((request, response, next) => {
   response.setHeader("Access-Control-Allow-Origin", "*");
@@ -274,6 +332,34 @@ app.post("/api/soundboard", (request, response) => {
   }
 
   broadcastSoundboardCue(body.soundId.trim());
+  response.setHeader("X-Server-Time", String(Date.now()));
+  response.status(202).json({ ok: true });
+});
+
+app.post("/api/show/next-game-intro", requireAdmin, async (request, response) => {
+  const nextGame = getNextOpenGame(currentState);
+
+  if (!nextGame) {
+    response.status(409).json({ error: "Es gibt kein offenes Spiel fuer die Anmoderation." });
+    return;
+  }
+
+  if (!nextGame.revealed) {
+    currentState = {
+      ...currentState,
+      games: currentState.games.map((game) =>
+        game.id === nextGame.id ? { ...game, revealed: true } : game
+      )
+    };
+    await persistState(currentState);
+    broadcastState();
+  }
+
+  broadcastNextGameCue(
+    { ...nextGame, revealed: true },
+    currentState.nextGameCueDurationMs,
+    currentState.nextGameCueHoldMs
+  );
   response.setHeader("X-Server-Time", String(Date.now()));
   response.status(202).json({ ok: true });
 });
