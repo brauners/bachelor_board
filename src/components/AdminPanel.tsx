@@ -262,7 +262,12 @@ export function AdminPanel({
                   type="button"
                   onClick={() => onSetWinner(game.id, "bachelor")}
                   disabled={game.points === null}
-                  className="rounded-full bg-accent-cyan px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-stage-950"
+                  className={[
+                    "rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-35",
+                    game.winner === "bachelor"
+                      ? "border border-accent-cyan bg-accent-cyan text-stage-950 shadow-[0_0_0_2px_rgba(66,214,255,0.2)]"
+                      : "border border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan"
+                  ].join(" ")}
                 >
                   Marius gewinnt
                 </button>
@@ -270,14 +275,25 @@ export function AdminPanel({
                   type="button"
                   onClick={() => onSetWinner(game.id, "guest")}
                   disabled={game.points === null}
-                  className="rounded-full bg-accent-coral px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white"
+                  className={[
+                    "rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-35",
+                    game.winner === "guest"
+                      ? "border border-accent-coral bg-accent-coral text-white shadow-[0_0_0_2px_rgba(255,107,107,0.2)]"
+                      : "border border-accent-coral/30 bg-accent-coral/10 text-accent-coral"
+                  ].join(" ")}
                 >
                   Gast gewinnt
                 </button>
                 <button
                   type="button"
                   onClick={() => onResetResult(game.id)}
-                  className="rounded-full border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.2em] text-white/75"
+                  disabled={game.winner === null}
+                  className={[
+                    "rounded-full px-3 py-2 text-xs uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-35",
+                    game.winner === null
+                      ? "border border-white/10 text-white/45"
+                      : "border border-white/20 bg-white/10 text-white/80"
+                  ].join(" ")}
                 >
                   Ergebnis zuruecksetzen
                 </button>
