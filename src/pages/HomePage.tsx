@@ -29,6 +29,7 @@ export function HomePage() {
     isAdminAuthenticated,
     authError,
     authPending,
+    syncDiagnostics,
     unassignedGames,
     canStartEvent,
     canAssignPendingPoints,
@@ -245,6 +246,21 @@ export function HomePage() {
 
   const topButtonClass =
     "min-w-[11rem] rounded-full border border-white/15 bg-stage-900/70 px-4 py-2 text-sm uppercase tracking-[0.25em] text-white/80 backdrop-blur-sm transition-colors hover:border-accent-cyan hover:text-accent-cyan";
+
+  const syncDiagnosticsLabel = useMemo(() => {
+    const offsetLabel =
+      syncDiagnostics.clockOffsetMs === null
+        ? "?"
+        : `${Math.round(syncDiagnostics.clockOffsetMs)} ms`;
+    const rttLabel =
+      syncDiagnostics.rttMs === null ? "?" : `${Math.round(syncDiagnostics.rttMs)} ms`;
+    const updatedLabel =
+      syncDiagnostics.updatedAt === null
+        ? "?"
+        : new Date(syncDiagnostics.updatedAt).toLocaleTimeString("de-DE");
+
+    return `RTT ${rttLabel} · Offset ${offsetLabel} · Update ${updatedLabel}`;
+  }, [syncDiagnostics]);
 
   return (
     <div className="min-h-screen bg-stage-radial text-white">
@@ -512,6 +528,10 @@ export function HomePage() {
             onAssignPendingPoints={assignPendingPoints}
           />
         ) : null}
+
+        <div className="pb-2 text-center text-xs text-white/35">
+          Sync-Diagnose: {syncDiagnosticsLabel}
+        </div>
       </div>
     </div>
   );

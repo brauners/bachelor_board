@@ -182,6 +182,7 @@ app.use((request, response, next) => {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.setHeader("Access-Control-Expose-Headers", "X-Server-Time");
 
   if (request.method === "OPTIONS") {
     response.status(204).end();
@@ -193,10 +194,12 @@ app.use((request, response, next) => {
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_request, response) => {
+  response.setHeader("X-Server-Time", String(Date.now()));
   response.json({ ok: true });
 });
 
 app.get("/api/state", (_request, response) => {
+  response.setHeader("X-Server-Time", String(Date.now()));
   response.json(currentState);
 });
 
@@ -223,6 +226,7 @@ app.post("/api/auth/login", (request, response) => {
 
 app.get("/api/auth/session", (request, response) => {
   const session = getSessionFromRequest(request);
+  response.setHeader("X-Server-Time", String(Date.now()));
   response.json({ authenticated: Boolean(session) });
 });
 
@@ -247,6 +251,7 @@ app.put("/api/state", requireAdmin, async (request, response) => {
     if (!wasFinished && isEventFinished(currentState)) {
       broadcastVictoryCue();
     }
+    response.setHeader("X-Server-Time", String(Date.now()));
     response.json(currentState);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save state";

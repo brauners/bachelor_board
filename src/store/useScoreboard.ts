@@ -7,9 +7,15 @@ import { normalizeState } from "../utils/state";
 import { loadState, saveState } from "../utils/storage";
 
 type GameInput = Pick<Game, "guestName" | "gameName" | "points">;
+type SyncDiagnostics = {
+  clockOffsetMs: number | null;
+  rttMs: number | null;
+  updatedAt: number | null;
+};
 
 const SESSION_STORAGE_KEY = "bachelor-board-admin-token";
 const REALTIME_PORT = import.meta.env.VITE_REALTIME_PORT ?? "8787";
+const SERVER_TIME_HEADER = "X-Server-Time";
 
 function getApiBaseUrl() {
   if (typeof window === "undefined") {
@@ -41,12 +47,18 @@ export function useScoreboard() {
   });
   const [authError, setAuthError] = useState<string | null>(null);
   const [authPending, setAuthPending] = useState(false);
+  const [syncDiagnostics, setSyncDiagnostics] = useState<SyncDiagnostics>({
+    clockOffsetMs: null,
+    rttMs: null,
+    updatedAt: null
+  });
   const reconnectTimerRef = useRef<number | null>(null);
   const offlineTimerRef = useRef<number | null>(null);
   const hasConnectedRef = useRef(false);
   const tokenRef = useRef(adminToken);
   const changeOriginRef = useRef<"idle" | "local" | "remote">("idle");
   const stateRef = useRef(state);
+  const serverClockOffsetRef = useRef(0);
   const apiBaseUrl = getApiBaseUrl();
 
   const totals = useMemo(() => calculateTotals(state.games), [state.games]);
@@ -74,6 +86,7 @@ export function useScoreboard() {
   const pushState = useCallback(
     async (nextState: ScoreboardState) => {
       try {
+        const requestStartedAt = Date.now();
         const response = await fetch(`${apiBaseUrl}/api/state`, {
           method: "PUT",
           headers: {
@@ -82,6 +95,7 @@ export function useScoreboard() {
           },
           body: JSON.stringify(nextState)
         });
+        const responseReceivedAt = Date.now();
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -89,6 +103,20 @@ export function useScoreboard() {
           }
 
           throw new Error("Server konnte den Spielstand nicht speichern.");
+        }
+
+        const serverTimeHeader = response.headers.get(SERVER_TIME_HEADER);
+        if (serverTimeHeader) {
+          const serverTime = Number(serverTimeHeader);
+          if (Number.isFinite(serverTime)) {
+            const rttMs = responseReceivedAt - requestStartedAt;
+            serverClockOffsetRef.current = serverTime - (requestStartedAt + responseReceivedAt) / 2;
+            setSyncDiagnostics({
+              clockOffsetMs: serverClockOffsetRef.current,
+              rttMs,
+              updatedAt: responseReceivedAt
+            });
+          }
         }
 
         setSyncError(null);
@@ -108,10 +136,26 @@ export function useScoreboard() {
   );
 
   const pullState = useCallback(async () => {
+    const requestStartedAt = Date.now();
     const response = await fetch(`${apiBaseUrl}/api/state`);
+    const responseReceivedAt = Date.now();
 
     if (!response.ok) {
       throw new Error("Serverzustand konnte nicht geladen werden.");
+    }
+
+    const serverTimeHeader = response.headers.get(SERVER_TIME_HEADER);
+    if (serverTimeHeader) {
+      const serverTime = Number(serverTimeHeader);
+      if (Number.isFinite(serverTime)) {
+        const rttMs = responseReceivedAt - requestStartedAt;
+        serverClockOffsetRef.current = serverTime - (requestStartedAt + responseReceivedAt) / 2;
+        setSyncDiagnostics({
+          clockOffsetMs: serverClockOffsetRef.current,
+          rttMs,
+          updatedAt: responseReceivedAt
+        });
+      }
     }
 
     const nextState = normalizeState((await response.json()) as ScoreboardState);
@@ -255,7 +299,10 @@ export function useScoreboard() {
           }
 
           if (payload.type === "victory_audio" && typeof payload.playAt === "number") {
-            const delayMs = Math.max(0, payload.playAt - Date.now());
+            const delayMs = Math.max(
+              0,
+              payload.playAt - (Date.now() + serverClockOffsetRef.current)
+            );
 
             window.dispatchEvent(
               new CustomEvent("bachelor-board:victory-audio", {
@@ -504,6 +551,7 @@ export function useScoreboard() {
     isAdminAuthenticated,
     authError,
     authPending,
+    syncDiagnostics,
     unassignedGames,
     canStartEvent,
     canAssignPendingPoints,
