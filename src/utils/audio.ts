@@ -6,7 +6,10 @@ type AudioWindow = Window &
 export const SOUNDBOARD_SOUNDS = [
   { id: "alarm", label: "Airhorn" },
   { id: "drumroll", label: "Trommelwirbel" },
-  { id: "ta-da", label: "Ta-Da" }
+  { id: "ta-da", label: "Ta-Da" },
+  { id: "gryffindor", label: "Gryffindor" },
+  { id: "one-does-not-simply", label: "One Does Not Simply" },
+  { id: "fart", label: "Fart" }
 ] as const;
 
 export type SoundboardSoundId = (typeof SOUNDBOARD_SOUNDS)[number]["id"];
@@ -20,7 +23,10 @@ const DEFAULT_VICTORY_SAMPLE_URL = "/audio/843046__silverillusionist__victory-fa
 const DEFAULT_SOUNDBOARD_SAMPLE_URLS: Record<SoundboardSoundId, string> = {
   alarm: "/audio/528807__pfranzen__dj-airhorn-sound.ogg",
   drumroll: "/audio/191718__adriann__drumroll.wav",
-  "ta-da": "/audio/850021__yoshicakes77__tada.wav"
+  "ta-da": "/audio/850021__yoshicakes77__tada.wav",
+  gryffindor: "/audio/gryffindor.wav",
+  "one-does-not-simply": "/audio/one_does_not_simply.wav",
+  fart: "/audio/446000__breviceps__fart-3.wav"
 };
 
 function getAudioContextCtor(): typeof AudioContext | null {

@@ -25,6 +25,10 @@ Soundboard samples:
   `drumroll.wav` by adriann -- https://freesound.org/s/191718/ -- License: Creative Commons 0
 - `Ta-Da`: `public/audio/850021__yoshicakes77__tada.wav`
   `Tada!` by Yoshicakes77 -- https://freesound.org/s/850021/ -- License: Creative Commons 0
+- `Gryffindor`: `public/audio/gryffindor.wav`
+- `One Does Not Simply`: `public/audio/one_does_not_simply.wav`
+- `Fart`: `public/audio/446000__breviceps__fart-3.wav`
+  `Fart 3` by Breviceps -- https://freesound.org/s/446000/ -- License: Creative Commons 0
 
 If one of these files is missing or playback fails, the app falls back to the built-in synthetic placeholder sound for that button.
 

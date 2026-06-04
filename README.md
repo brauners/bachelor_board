@@ -17,6 +17,9 @@ Hinweis: Dieses Projekt wurde mit KI-Unterstuetzung erstellt und weiterentwickel
   `Tada!` by Yoshicakes77 -- https://freesound.org/s/850021/ -- License: Creative Commons 0
   `drumroll.wav` by adriann -- https://freesound.org/s/191718/ -- License: Creative Commons 0
   `DJ airhorn sound` by pfranzen -- https://freesound.org/s/528807/ -- License: Creative Commons 0
+  `Fart 3` by Breviceps -- https://freesound.org/s/446000/ -- License: Creative Commons 0
+  `gryffindor.wav`
+  `one_does_not_simply.wav`
 - Diese Attribution gilt fuer die genannte Audiodatei, nicht fuer den restlichen Projektcode.
 
 ## Docker Produktion
